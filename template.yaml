@@ -66,9 +66,12 @@ Resources:
         Variables:
           BEDROCK_MODEL_ID: !Ref BedrockModelId
           POLLY_VOICE_ID: Joanna
+          AUDIO_BUCKET: !Ref AudioBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref ConnectionsTable
+        - S3WritePolicy:
+            BucketName: !Ref AudioBucket
         - Statement:
             - Effect: Allow
               Action:
@@ -169,6 +172,17 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${WebSocketApi}/*/$default"
+
+  # ── Audio hosting ────────────────────────────────────────────────────────
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-audio-${AWS::AccountId}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldAudio
+            Status: Enabled
+            ExpirationInDays: 1
 
   # ── Frontend hosting ─────────────────────────────────────────────────────
   FrontendBucket:

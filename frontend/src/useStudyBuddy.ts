@@ -63,7 +63,7 @@ export function useStudyBuddy(): StudyBuddyState {
           () => setTranscript((prev) => [...prev, { role: 'buddy', text: msg.text }]),
           1650,
         )
-        playResponse(msg.audio_b64, msg.visemes)
+        playResponse(msg.audio_url, msg.visemes)
       }
     }
   }, [])
@@ -78,16 +78,11 @@ export function useStudyBuddy(): StudyBuddyState {
     }
   }, [connect])
 
-  function playResponse(audio_b64: string, visemes: Viseme[]) {
+  function playResponse(audioUrl: string, visemes: Viseme[]) {
     visemeTimers.current.forEach(clearTimeout)
     visemeTimers.current = []
 
-    const blob = new Blob(
-      [Uint8Array.from(atob(audio_b64), (c) => c.charCodeAt(0))],
-      { type: 'audio/mpeg' }
-    )
-    const url = URL.createObjectURL(blob)
-    const audio = new Audio(url)
+    const audio = new Audio(audioUrl)
     audioRef.current = audio
 
     // Set talking immediately so CharacterCanvas starts the transition_in GIF.
@@ -108,7 +103,6 @@ export function useStudyBuddy(): StudyBuddyState {
     audio.onended = () => {
       setAppState('idle')
       setCurrentViseme('sil')
-      URL.revokeObjectURL(url)
     }
 
     const playId = window.setTimeout(() => audio.play(), TRANSITION_DELAY_MS)

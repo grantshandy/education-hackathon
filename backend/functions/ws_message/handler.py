@@ -1,13 +1,16 @@
 import base64
 import json
 import os
+import uuid
 import boto3
 
 bedrock = boto3.client("bedrock-runtime")
 polly = boto3.client("polly")
+s3 = boto3.client("s3")
 
 MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 VOICE_ID = os.environ.get("POLLY_VOICE_ID", "Joanna")
+AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
 
 SYSTEM_PROMPT = (
     "You are a friendly, concise study buddy. "
@@ -35,18 +38,28 @@ def _ask_bedrock(text: str) -> str:
 
 
 def _synthesize(text: str) -> dict:
-    """Returns {"audio_b64": str, "visemes": list[{"time": int, "value": str}]}"""
-    # Audio
+    """Returns {"audio_url": str, "visemes": list[{"time": int, "value": str}]}"""
     audio_resp = polly.synthesize_speech(
         Text=text,
         OutputFormat="mp3",
         VoiceId=VOICE_ID,
         Engine="neural",
     )
-    audio_b64 = base64.b64encode(audio_resp["AudioStream"].read()).decode()
+    audio_bytes = audio_resp["AudioStream"].read()
 
-    # Viseme speech marks (separate Polly call — speech marks and audio are
-    # mutually exclusive output formats)
+    key = f"audio/{uuid.uuid4()}.mp3"
+    s3.put_object(
+        Bucket=AUDIO_BUCKET,
+        Key=key,
+        Body=audio_bytes,
+        ContentType="audio/mpeg",
+    )
+    audio_url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": AUDIO_BUCKET, "Key": key},
+        ExpiresIn=300,
+    )
+
     marks_resp = polly.synthesize_speech(
         Text=text,
         OutputFormat="json",
@@ -57,7 +70,7 @@ def _synthesize(text: str) -> dict:
     raw = marks_resp["AudioStream"].read().decode()
     visemes = [json.loads(line) for line in raw.strip().splitlines() if line]
 
-    return {"audio_b64": audio_b64, "visemes": visemes}
+    return {"audio_url": audio_url, "visemes": visemes}
 
 
 def lambda_handler(event, context):
@@ -74,7 +87,6 @@ def lambda_handler(event, context):
         )
         return {"statusCode": 400}
 
-    # Let the client know we're processing
     apigw.post_to_connection(
         ConnectionId=connection_id,
         Data=json.dumps({"type": "thinking"}),
@@ -88,7 +100,7 @@ def lambda_handler(event, context):
         Data=json.dumps({
             "type": "response",
             "text": response_text,
-            "audio_b64": speech["audio_b64"],
+            "audio_url": speech["audio_url"],
             "visemes": speech["visemes"],
         }),
     )
