@@ -21,10 +21,12 @@ const FEATURES = [
 export default function LoginPage({
   onLogin,
   onSwitchToSignup,
+  onForgotPassword,
   onBack,
 }: {
   onLogin: () => void
   onSwitchToSignup: () => void
+  onForgotPassword: () => void
   onBack: () => void
 }) {
   const { login, error, clearError, googleReady, renderGoogleButton } = useAuth()
@@ -179,6 +181,7 @@ export default function LoginPage({
                     </label>
                     <button
                       type="button"
+                      onClick={onForgotPassword}
                       className="text-xs font-semibold text-indigo hover:underline cursor-pointer"
                     >
                       Forgot password?

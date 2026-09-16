@@ -4,6 +4,8 @@ import {
   signUp as amplifySignUp,
   signOut as amplifySignOut,
   confirmSignUp,
+  resetPassword as amplifyResetPassword,
+  confirmResetPassword as amplifyConfirmResetPassword,
   getCurrentUser,
   fetchAuthSession,
   fetchUserAttributes,
@@ -60,6 +62,8 @@ interface AuthContextType {
     password: string
   ) => Promise<{ needsConfirmation: boolean }>
   confirm: (email: string, code: string) => Promise<void>
+  forgotPassword: (email: string) => Promise<void>
+  forgotPasswordSubmit: (email: string, code: string, newPassword: string) => Promise<void>
   logout: () => Promise<void>
   getIdToken: () => Promise<string | null>
   clearError: () => void
@@ -84,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const [googleReady, setGoogleReady] = useState(false)
   const googleTokenRef = useRef<string | null>(null)
-  const handleGoogleRef = useRef<(response: { credential: string }) => void>()
+  const handleGoogleRef = useRef<((response: { credential: string }) => void) | undefined>(undefined)
 
   handleGoogleRef.current = (response) => {
     try {
@@ -246,6 +250,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function forgotPassword(email: string) {
+    setError(null)
+    try {
+      await amplifyResetPassword({ username: email })
+    } catch (e: any) {
+      const msg =
+        e.name === 'UserNotFoundException'
+          ? 'No account found with this email.'
+          : e.message || 'Failed to send reset code.'
+      setError(msg)
+      throw e
+    }
+  }
+
+  async function forgotPasswordSubmit(email: string, code: string, newPassword: string) {
+    setError(null)
+    try {
+      await amplifyConfirmResetPassword({
+        username: email,
+        confirmationCode: code,
+        newPassword,
+      })
+    } catch (e: any) {
+      const msg =
+        e.name === 'CodeMismatchException'
+          ? 'Invalid verification code.'
+          : e.name === 'InvalidPasswordException'
+            ? 'Password does not meet requirements.'
+            : e.message || 'Failed to reset password.'
+      setError(msg)
+      throw e
+    }
+  }
+
   async function logout() {
     try { await amplifySignOut() } catch {}
     googleTokenRef.current = null
@@ -279,6 +317,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         confirm,
+        forgotPassword,
+        forgotPasswordSubmit,
         logout,
         getIdToken,
         clearError,

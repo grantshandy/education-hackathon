@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { AuthProvider, useAuth } from './AuthContext'
 import LoginPage from './LoginPage'
+import ForgotPasswordPage from './ForgotPasswordPage'
 import SignupPage from './SignupPage'
 import HomePage from './HomePage'
 import DashboardPage from './DashboardPage'
@@ -10,7 +11,7 @@ import { Binary } from 'lucide-react'
 
 const isDev = import.meta.env.DEV
 
-type Page = 'home' | 'login' | 'signup' | 'dashboard' | 'session' | 'course'
+type Page = 'home' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'session' | 'course'
 
 function AppRoutes() {
   const { user, loading, logout } = useAuth()
@@ -19,7 +20,7 @@ function AppRoutes() {
 
   const effectivePage = useMemo(() => {
     if (debugBypass) return page
-    if (user && (page === 'home' || page === 'login' || page === 'signup'))
+    if (user && (page === 'home' || page === 'login' || page === 'signup' || page === 'forgot-password'))
       return 'dashboard' as const
     if (!user && (page === 'dashboard' || page === 'session' || page === 'course'))
       return 'login' as const
@@ -40,7 +41,15 @@ function AppRoutes() {
         <LoginPage
           onLogin={() => setPage('dashboard')}
           onSwitchToSignup={() => setPage('signup')}
+          onForgotPassword={() => setPage('forgot-password')}
           onBack={() => setPage('home')}
+        />
+      )
+    case 'forgot-password':
+      return (
+        <ForgotPasswordPage
+          onDone={() => setPage('login')}
+          onBack={() => setPage('login')}
         />
       )
     case 'signup':
