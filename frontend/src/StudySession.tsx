@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useStudyBuddy } from './useStudyBuddy'
 import { CharacterCanvas } from './CharacterCanvas'
+import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
   Mic,
@@ -18,6 +19,7 @@ const CHARACTER_IMAGE = '/character.jpg'
 export default function StudySession({ onExit }: { onExit: () => void }) {
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy()
   const [input, setInput] = useState('')
+  const [showPostStudy, setShowPostStudy] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const [sessionStart] = useState(() => new Date())
 
@@ -77,7 +79,7 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
           </div>
         </div>
         <button
-          onClick={onExit}
+          onClick={() => setShowPostStudy(true)}
           className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E11D48] text-[#E11D48] text-sm font-semibold hover:bg-[#FFF1F2] transition-colors cursor-pointer"
         >
           <Square className="w-3 h-3 fill-current" />
@@ -216,6 +218,19 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
           </div>
         </div>
       </div>
+
+      {showPostStudy && (
+        <PostStudyModal
+          onClose={() => setShowPostStudy(false)}
+          onBackToDashboard={onExit}
+          onGenerateSummary={() => {}}
+          stats={{
+            timeStudied: `${Math.max(1, Math.round((Date.now() - sessionStart.getTime()) / 60000))} min`,
+            messages: transcript.length,
+            topicsCount: Math.max(1, Math.floor(transcript.length / 3)),
+          }}
+        />
+      )}
     </div>
   )
 }
