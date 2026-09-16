@@ -1,6 +1,17 @@
 import { useRef, useState } from 'react'
 import { useStudyBuddy } from './useStudyBuddy'
 import { CharacterCanvas } from './CharacterCanvas'
+import {
+  GraduationCap,
+  Mic,
+  Video,
+  Settings,
+  Paperclip,
+  ArrowUp,
+  Square,
+  ExternalLink,
+  Minus,
+} from 'lucide-react'
 
 const CHARACTER_IMAGE = '/character.jpg'
 
@@ -8,6 +19,7 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [sessionStart] = useState(() => new Date())
 
   function handleSend() {
     const text = input.trim()
@@ -23,89 +35,192 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
     ? 'Thinking…'
     : appState === 'talking'
     ? 'Speaking…'
-    : 'Listening'
+    : 'Listening…'
 
-  const statusColor =
-    appState === 'talking'  ? 'bg-purple-700' :
-    appState === 'thinking' ? 'bg-yellow-700' :
-    connected               ? 'bg-green-800'  : 'bg-gray-700'
+  const startTime = sessionStart.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
 
   return (
-    <div className="h-screen bg-gray-950 text-gray-100 flex overflow-hidden">
-
-      {/* ── Left: character ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 min-w-0">
-
-        {/* Header */}
-        <div className="w-full flex items-center justify-between shrink-0">
-          <button
-            onClick={onExit}
-            className="text-gray-400 hover:text-gray-200 text-sm flex items-center gap-1 transition-colors"
-          >
-            <span>&larr;</span> Home
-          </button>
-          <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusColor}`}>
-            {statusLabel}
+    <div className="h-screen flex flex-col bg-cream-100 font-instrument overflow-hidden">
+      {/* Nav */}
+      <nav className="h-16 px-8 flex items-center justify-between border-b border-cream-border bg-white shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
+            <GraduationCap className="w-[18px] h-[18px] text-white" />
+          </div>
+          <span className="font-bold text-lg text-indigo-dark">StudyMate</span>
+        </div>
+        <div className="flex items-center gap-8">
+          <span className="text-[15px] font-medium text-indigo-dark cursor-pointer">
+            Home
           </span>
+          <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer">
+            Settings
+          </span>
+          <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
         </div>
+      </nav>
 
-        {/* Character canvas */}
-        <div className="relative flex-1 w-full flex items-center justify-center min-h-0">
-          <CharacterCanvas
-            imageSrc={CHARACTER_IMAGE}
-            viseme={currentViseme}
-            talking={appState === 'talking'}
-          />
+      {/* Session header */}
+      <div className="px-8 py-4 flex items-center justify-between shrink-0">
+        <div>
+          <h1 className="font-bold text-2xl text-indigo-dark">
+            Study Session
+          </h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <div className="w-2 h-2 rounded-full bg-[#E11D48]" />
+            <span className="text-sm text-[#5C5A80]">
+              Started {startTime}
+            </span>
+          </div>
         </div>
+        <button
+          onClick={onExit}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E11D48] text-[#E11D48] text-sm font-semibold hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+        >
+          <Square className="w-3 h-3 fill-current" />
+          End Session
+        </button>
       </div>
 
-      {/* ── Right: chat panel ── */}
-      <div className="w-80 shrink-0 flex flex-col border-l border-gray-800 bg-gray-900">
+      {/* Main content */}
+      <div className="flex-1 flex px-8 pb-6 gap-6 min-h-0">
+        {/* Left — character */}
+        <div className="flex-[55] flex flex-col min-w-0">
+          <div className="flex-1 relative bg-gray-900 rounded-2xl overflow-hidden flex items-center justify-center">
+            <CharacterCanvas
+              imageSrc={CHARACTER_IMAGE}
+              viseme={currentViseme}
+              talking={appState === 'talking'}
+            />
 
-        {/* Transcript */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-3 p-4">
-          {transcript.length === 0 ? (
-            <p className="text-center text-gray-500 text-sm mt-8">
-              Ask your study buddy anything…
-            </p>
-          ) : (
-            transcript.map((msg, i) => (
+            {/* Status overlay — top left */}
+            <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-lg">
               <div
-                key={i}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[90%] px-3 py-2 rounded-2xl text-sm ${
-                  msg.role === 'user'
-                    ? 'bg-purple-700 text-white rounded-br-sm'
-                    : 'bg-gray-800 text-gray-100 rounded-bl-sm'
-                }`}>
-                  {msg.text}
-                </div>
+                className={`w-2 h-2 rounded-full ${
+                  connected ? 'bg-green-400' : 'bg-gray-400'
+                }`}
+              />
+              <div className="flex flex-col">
+                <span className="text-white text-xs font-semibold leading-tight">
+                  Study Buddy
+                </span>
+                <span className="text-white/70 text-[11px] leading-tight">
+                  {statusLabel}
+                </span>
               </div>
-            ))
-          )}
-          <div ref={bottomRef} />
+            </div>
+
+            {/* Top right icons */}
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+                <ExternalLink className="w-4 h-4" />
+              </button>
+              <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+                <Minus className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Bottom controls */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+              <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
+                <Video className="w-5 h-5" />
+              </button>
+              <button className="w-16 h-16 rounded-full bg-indigo-light hover:bg-indigo flex items-center justify-center text-white transition-colors cursor-pointer shadow-[0_4px_20px_rgba(129,140,248,0.4)]">
+                <Mic className="w-6 h-6" />
+              </button>
+              <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Input */}
-        <div className="p-3 border-t border-gray-800 flex gap-2">
-          <input
-            className="flex-1 bg-gray-800 text-gray-100 placeholder-gray-500 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-600 min-w-0"
-            placeholder={connected ? 'Ask something…' : 'Connecting…'}
-            value={input}
-            disabled={!connected || appState !== 'idle'}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          />
-          <button
-            className="bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shrink-0"
-            disabled={!connected || appState !== 'idle' || !input.trim()}
-            onClick={handleSend}
-          >
-            Send
-          </button>
+        {/* Right — chat panel */}
+        <div className="flex-[45] flex flex-col min-w-0 min-h-0">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto flex flex-col gap-5 pr-1">
+            {transcript.length === 0 ? (
+              <p className="text-center text-ink-muted text-sm mt-12">
+                Ask your study buddy anything…
+              </p>
+            ) : (
+              transcript.map((msg, i) => (
+                <div key={i}>
+                  {msg.role === 'buddy' ? (
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-indigo flex items-center justify-center shrink-0 mt-0.5">
+                        <GraduationCap className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <div className="bg-white border border-cream-border rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-ink leading-relaxed">
+                          {msg.text}
+                        </div>
+                        <span className="text-[11px] text-ink-muted pl-1">
+                          {formatTime(sessionStart, i)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="bg-indigo-bg border border-indigo-light/20 rounded-2xl rounded-tr-sm px-4 py-3 text-sm text-ink leading-relaxed max-w-[85%]">
+                        {msg.text}
+                      </div>
+                      <span className="text-[11px] text-ink-muted pr-1">
+                        {formatTime(sessionStart, i)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+
+            {/* Typing indicator */}
+            {appState === 'thinking' && (
+              <div className="flex items-center gap-1 px-2 py-1">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:0ms]" />
+                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:150ms]" />
+                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            )}
+
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="pt-4 shrink-0">
+            <div className="flex items-center gap-3 bg-white border border-cream-border rounded-2xl px-4 py-3">
+              <button className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0">
+                <Paperclip className="w-5 h-5" />
+              </button>
+              <input
+                className="flex-1 text-sm text-ink placeholder-ink-muted outline-none bg-transparent min-w-0"
+                placeholder={connected ? 'Message StudyMate...' : 'Connecting…'}
+                value={input}
+                disabled={!connected || appState !== 'idle'}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              />
+              <button
+                className="w-9 h-9 rounded-full bg-indigo hover:bg-indigo-dark disabled:opacity-40 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                disabled={!connected || appState !== 'idle' || !input.trim()}
+                onClick={handleSend}
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   )
+}
+
+function formatTime(_sessionStart: Date, _index: number): string {
+  const now = new Date()
+  return now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
