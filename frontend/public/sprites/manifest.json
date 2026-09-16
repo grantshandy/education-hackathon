@@ -1,0 +1,19 @@
+{
+  "sil": "/sprites/viseme_sil.png",
+  "p": "/sprites/viseme_p.png",
+  "t": "/sprites/viseme_t.png",
+  "S": "/sprites/viseme_t.png",
+  "T": "/sprites/viseme_t.png",
+  "s": "/sprites/viseme_t.png",
+  "f": "/sprites/viseme_f.png",
+  "k": "/sprites/viseme_k.png",
+  "i": "/sprites/viseme_i.png",
+  "r": "/sprites/viseme_r.png",
+  "u": "/sprites/viseme_u.png",
+  "@": "/sprites/viseme_schwa.png",
+  "a": "/sprites/viseme_a.png",
+  "e": "/sprites/viseme_e.png",
+  "E": "/sprites/viseme_e.png",
+  "o": "/sprites/viseme_o.png",
+  "O": "/sprites/viseme_o.png"
+}
