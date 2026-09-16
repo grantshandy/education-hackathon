@@ -7,7 +7,6 @@ import HomePage from './HomePage'
 import DashboardPage from './DashboardPage'
 import StudySession from './StudySession'
 import CoursePage from './CoursePage'
-import { Binary } from 'lucide-react'
 
 const isDev = import.meta.env.DEV
 
@@ -17,6 +16,8 @@ function AppRoutes() {
   const { user, loading, logout } = useAuth()
   const [page, setPage] = useState<Page>('home')
   const [debugBypass, setDebugBypass] = useState(false)
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
 
   const effectivePage = useMemo(() => {
     if (debugBypass) return page
@@ -63,8 +64,14 @@ function AppRoutes() {
     case 'dashboard':
       return (
         <DashboardPage
-          onStartSession={() => setPage('session')}
-          onOpenCourse={() => setPage('course')}
+          onStartSession={(sessionId) => {
+            setActiveSessionId(sessionId)
+            setPage('session')
+          }}
+          onOpenCourse={(courseId) => {
+            setSelectedCourseId(courseId)
+            setPage('course')
+          }}
           onLogout={async () => {
             await logout()
             setPage('home')
@@ -72,17 +79,16 @@ function AppRoutes() {
         />
       )
     case 'session':
-      return <StudySession onExit={() => setPage('dashboard')} />
+      return <StudySession sessionId={activeSessionId} onExit={() => setPage('dashboard')} />
     case 'course':
       return (
         <CoursePage
-          courseName="Algorithms"
-          courseIcon={Binary}
-          color="red"
-          materials={8}
-          sessions={4}
+          courseId={selectedCourseId!}
           onBack={() => setPage('dashboard')}
-          onStartSession={() => setPage('session')}
+          onStartSession={(sessionId) => {
+            setActiveSessionId(sessionId)
+            setPage('session')
+          }}
         />
       )
     default:
