@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   GraduationCap,
   PlayCircle,
@@ -10,6 +11,8 @@ import {
   Calendar,
   Clock,
 } from 'lucide-react'
+import StartSessionModal from './StartSessionModal'
+import AddCourseModal from './AddCourseModal'
 
 const COURSES = [
   {
@@ -104,6 +107,8 @@ export default function DashboardPage({
 }: {
   onStartSession: () => void
 }) {
+  const [showStartModal, setShowStartModal] = useState(false)
+  const [showAddCourseModal, setShowAddCourseModal] = useState(false)
   const greeting = getGreeting()
 
   return (
@@ -135,7 +140,7 @@ export default function DashboardPage({
             {greeting}, Steven.
           </h1>
           <button
-            onClick={onStartSession}
+            onClick={() => setShowStartModal(true)}
             className="flex items-center gap-2.5 bg-indigo hover:bg-indigo-dark px-8 py-[18px] rounded-full text-white font-semibold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(79,70,229,0.2)]"
           >
             <PlayCircle className="w-5 h-5" />
@@ -186,7 +191,10 @@ export default function DashboardPage({
                 </span>
               </div>
             ))}
-            <div className="flex-1 h-[180px] p-6 rounded-[20px] border border-dashed border-cream-dash-border flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-ink-muted transition-colors">
+            <div
+              onClick={() => setShowAddCourseModal(true)}
+              className="flex-1 h-[180px] p-6 rounded-[20px] border border-dashed border-cream-dash-border flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-ink-muted transition-colors"
+            >
               <div className="w-10 h-10 rounded-[20px] border border-cream-dash-border flex items-center justify-center">
                 <Plus className="w-4 h-4 text-[#5C5A80]" />
               </div>
@@ -238,6 +246,23 @@ export default function DashboardPage({
           </div>
         </section>
       </main>
+
+      {showStartModal && (
+        <StartSessionModal
+          onClose={() => setShowStartModal(false)}
+          onStart={() => {
+            setShowStartModal(false)
+            onStartSession()
+          }}
+        />
+      )}
+
+      {showAddCourseModal && (
+        <AddCourseModal
+          onClose={() => setShowAddCourseModal(false)}
+          onCreate={() => setShowAddCourseModal(false)}
+        />
+      )}
     </div>
   )
 }
