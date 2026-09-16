@@ -16,5 +16,7 @@ pkgs.mkShell {
     # Dev tools
     jq
     curl
+    yt-dlp
+    ffmpeg
   ];
 }

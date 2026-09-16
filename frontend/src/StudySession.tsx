@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStudyBuddy } from './useStudyBuddy'
 import { CharacterCanvas } from './CharacterCanvas'
 import PostStudyModal from './PostStudyModal'
@@ -14,14 +14,40 @@ import {
   Minus,
 } from 'lucide-react'
 
-const CHARACTER_IMAGE = '/character.jpg'
+const REST_IMAGE      = '/studying.png'
+const ATTENTION_IMAGE = '/at-attention.jpg'
 
 export default function StudySession({ onExit }: { onExit: () => void }) {
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy()
   const [input, setInput] = useState('')
   const [showPostStudy, setShowPostStudy] = useState(false)
+  const [muted, setMuted] = useState(false)
+  const [musicSrc, setMusicSrc] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const musicRef = useRef<HTMLAudioElement>(null)
   const [sessionStart] = useState(() => new Date())
+
+  // Only mount audio element if the file actually exists (HEAD check prevents
+  // the "Content-Type text/html" error when the file hasn't been downloaded yet)
+  useEffect(() => {
+    fetch('/lofi-music.mp3', { method: 'HEAD' })
+      .then(r => {
+        const ct = r.headers.get('content-type') ?? ''
+        if (r.ok && ct.startsWith('audio')) setMusicSrc('/lofi-music.mp3')
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const audio = musicRef.current
+    if (!audio || !musicSrc) return
+    audio.volume = 0.35
+    const tryPlay = () => audio.play().catch(() => {})
+    tryPlay()
+    const resume = () => { tryPlay(); document.removeEventListener('click', resume) }
+    document.addEventListener('click', resume)
+    return () => document.removeEventListener('click', resume)
+  }, [musicSrc])
 
   function handleSend() {
     const text = input.trim()
@@ -29,6 +55,13 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
     send(text)
     setInput('')
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
+
+  function toggleMute() {
+    const audio = musicRef.current
+    if (!audio) return
+    audio.muted = !audio.muted
+    setMuted(audio.muted)
   }
 
   const statusLabel = !connected
@@ -46,6 +79,9 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
 
   return (
     <div className="h-screen flex flex-col bg-cream-100 font-instrument overflow-hidden">
+
+      {musicSrc && <audio ref={musicRef} src={musicSrc} loop hidden />}
+
       {/* Nav */}
       <nav className="h-16 px-8 flex items-center justify-between border-b border-cream-border bg-white shrink-0">
         <div className="flex items-center gap-2">
@@ -61,6 +97,13 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
           <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer">
             Settings
           </span>
+          <button
+            onClick={toggleMute}
+            className="text-[#5C5A80] hover:text-indigo-dark transition-colors text-lg"
+            title={muted ? 'Unmute music' : 'Mute music'}
+          >
+            {muted ? '🔇' : '🎵'}
+          </button>
           <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
         </div>
       </nav>
@@ -89,29 +132,23 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
 
       {/* Main content */}
       <div className="flex-1 flex px-8 pb-6 gap-6 min-h-0">
+
         {/* Left — character */}
         <div className="flex-[55] flex flex-col min-w-0">
           <div className="flex-1 relative bg-gray-900 rounded-2xl overflow-hidden flex items-center justify-center">
             <CharacterCanvas
-              imageSrc={CHARACTER_IMAGE}
+              restSrc={REST_IMAGE}
+              attentionSrc={ATTENTION_IMAGE}
               viseme={currentViseme}
               talking={appState === 'talking'}
             />
 
             {/* Status overlay — top left */}
             <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  connected ? 'bg-green-400' : 'bg-gray-400'
-                }`}
-              />
+              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-gray-400'}`} />
               <div className="flex flex-col">
-                <span className="text-white text-xs font-semibold leading-tight">
-                  Study Buddy
-                </span>
-                <span className="text-white/70 text-[11px] leading-tight">
-                  {statusLabel}
-                </span>
+                <span className="text-white text-xs font-semibold leading-tight">Study Buddy</span>
+                <span className="text-white/70 text-[11px] leading-tight">{statusLabel}</span>
               </div>
             </div>
 

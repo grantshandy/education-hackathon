@@ -57,7 +57,10 @@ export function useStudyBuddy(): StudyBuddyState {
       if (msg.type === 'thinking') {
         setAppState('thinking')
       } else if (msg.type === 'response') {
-        setTranscript((prev) => [...prev, { role: 'buddy', text: msg.text }])
+        setTimeout(
+          () => setTranscript((prev) => [...prev, { role: 'buddy', text: msg.text }]),
+          1650,
+        )
         playResponse(msg.audio_b64, msg.visemes)
       }
     }
@@ -85,10 +88,18 @@ export function useStudyBuddy(): StudyBuddyState {
     const audio = new Audio(url)
     audioRef.current = audio
 
+    // Set talking immediately so CharacterCanvas starts the transition_in GIF.
+    // Delay audio + visemes by the same duration so speech starts after the
+    // animation finishes.
+    const TRANSITION_DELAY_MS = 1650
+
     setAppState('talking')
 
     visemes.forEach((v) => {
-      const id = window.setTimeout(() => setCurrentViseme(v.value), v.time)
+      const id = window.setTimeout(
+        () => setCurrentViseme(v.value),
+        v.time + TRANSITION_DELAY_MS,
+      )
       visemeTimers.current.push(id)
     })
 
@@ -98,7 +109,8 @@ export function useStudyBuddy(): StudyBuddyState {
       URL.revokeObjectURL(url)
     }
 
-    audio.play()
+    const playId = window.setTimeout(() => audio.play(), TRANSITION_DELAY_MS)
+    visemeTimers.current.push(playId)
   }
 
   const send = useCallback((text: string) => {
