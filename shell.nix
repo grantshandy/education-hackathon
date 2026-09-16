@@ -8,6 +8,7 @@ pkgs.mkShell {
 
     # Backend
     python312
+    python312Packages.pip
     python312Packages.boto3
 
     # Frontend

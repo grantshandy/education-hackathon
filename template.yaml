@@ -4,7 +4,7 @@ Description: Lofi study buddy - WebSocket backend
 
 Globals:
   Function:
-    Runtime: python3.11
+    Runtime: python3.12
     Timeout: 30
     Environment:
       Variables:
@@ -158,6 +158,11 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - s3:GetObject
+              Resource: !Sub "${AudioBucket.Arn}/*"
+        - Statement:
+            - Effect: Allow
+              Action:
                 - bedrock:InvokeModel
               Resource: "*"
             - Effect: Allow
@@ -261,6 +266,12 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "${AWS::StackName}-audio-${AWS::AccountId}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ["*"]
+            AllowedMethods: [GET]
+            AllowedHeaders: ["*"]
+            MaxAge: 300
       LifecycleConfiguration:
         Rules:
           - Id: DeleteOldAudio

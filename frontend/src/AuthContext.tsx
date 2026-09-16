@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import {
   signIn as amplifySignIn,
   signUp as amplifySignUp,
@@ -158,14 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
-  async function getIdToken(): Promise<string | null> {
+  const getIdToken = useCallback(async (): Promise<string | null> => {
     try {
       const session = await fetchAuthSession()
       return session.tokens?.idToken?.toString() ?? null
     } catch {
       return null
     }
-  }
+  }, [])
 
   function loginWithGoogle() {
     signInWithRedirect({ provider: 'Google' })

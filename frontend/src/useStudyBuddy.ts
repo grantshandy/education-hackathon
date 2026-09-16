@@ -66,6 +66,7 @@ export function useStudyBuddy(
 
     socket.onmessage = (event) => {
       const msg = JSON.parse(event.data)
+      console.log('[ws] message:', msg.type, msg.audio_url ? `audio_url=${msg.audio_url.slice(0,80)}...` : 'no audio_url')
       if (msg.type === 'thinking') {
         setAppState('thinking')
       } else if (msg.type === 'response') {
@@ -88,19 +89,29 @@ export function useStudyBuddy(
     }
   }, [connect])
 
-  function playResponse(audioUrl: string, visemes: Viseme[]) {
+  async function playResponse(audioUrl: string, visemes: Viseme[]) {
+    console.log('[audio] playResponse called, url:', audioUrl?.slice(0, 80))
     visemeTimers.current.forEach(clearTimeout)
     visemeTimers.current = []
 
-    const audio = new Audio(audioUrl)
-    audioRef.current = audio
-
-    // Set talking immediately so CharacterCanvas starts the transition_in GIF.
-    // Delay audio + visemes by the same duration so speech starts after the
-    // animation finishes.
+    // Start transition animation immediately while audio fetches in parallel
     const TRANSITION_DELAY_MS = 1650
-
     setAppState('talking')
+
+    let objectUrl: string
+    try {
+      const res = await fetch(audioUrl, { mode: 'cors' })
+      const blob = await res.blob()
+      objectUrl = URL.createObjectURL(blob)
+    } catch (e) {
+      console.error('[audio] fetch error:', e)
+      setAppState('idle')
+      return
+    }
+
+    const audio = new Audio(objectUrl)
+    audio.onerror = (e) => console.error('[audio] load error:', e, audio.error)
+    audioRef.current = audio
 
     visemes.forEach((v) => {
       const id = window.setTimeout(
@@ -113,6 +124,7 @@ export function useStudyBuddy(
     audio.onended = () => {
       setAppState('idle')
       setCurrentViseme('sil')
+      URL.revokeObjectURL(objectUrl)
     }
 
     const playId = window.setTimeout(() => audio.play(), TRANSITION_DELAY_MS)
