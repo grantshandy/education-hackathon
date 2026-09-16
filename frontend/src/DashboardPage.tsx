@@ -104,8 +104,10 @@ const SESSIONS = [
 
 export default function DashboardPage({
   onStartSession,
+  onOpenCourse,
 }: {
   onStartSession: () => void
+  onOpenCourse: () => void
 }) {
   const [showStartModal, setShowStartModal] = useState(false)
   const [showAddCourseModal, setShowAddCourseModal] = useState(false)
@@ -172,6 +174,7 @@ export default function DashboardPage({
             {COURSES.map((course) => (
               <div
                 key={course.name}
+                onClick={onOpenCourse}
                 className={`flex-1 h-[180px] p-6 rounded-[20px] ${course.bg} border ${course.border} flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow`}
               >
                 <div className="flex flex-col gap-3">
