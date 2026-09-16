@@ -1,1 +1,24 @@
 @import "tailwindcss";
+
+@theme {
+  --font-gabarito: "Gabarito", system-ui, sans-serif;
+  --font-instrument: "Instrument Sans", system-ui, sans-serif;
+  --font-geist: "Geist", system-ui, sans-serif;
+
+  --color-cream-50: #FCFAF7;
+  --color-cream-100: #FAF9F6;
+  --color-cream-200: #F0EDF6;
+  --color-cream-border: #EAE6E1;
+  --color-cream-border-dark: #E2DFD7;
+  --color-cream-muted: #DEDBD4;
+  --color-cream-dash-border: #CDCAC2;
+
+  --color-ink: #2E2E3A;
+  --color-ink-secondary: #5C5C70;
+  --color-ink-muted: #8E8E9F;
+
+  --color-indigo: #4F46E5;
+  --color-indigo-light: #818CF8;
+  --color-indigo-bg: #EEF2FF;
+  --color-indigo-dark: #1E1B4B;
+}
