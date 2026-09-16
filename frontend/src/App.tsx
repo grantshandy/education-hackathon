@@ -46,7 +46,7 @@ function AppRoutes() {
     case 'signup':
       return (
         <SignupPage
-          onSignup={() => setPage('login')}
+          onSignup={() => setPage('dashboard')}
           onSwitchToLogin={() => setPage('login')}
           onBack={() => setPage('home')}
         />

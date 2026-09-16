@@ -9,6 +9,7 @@ table = dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
 
 COGNITO_REGION = os.environ.get("COGNITO_REGION", "us-east-1")
 USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 
 TTL_SECONDS = 3600 * 24
 
@@ -26,14 +27,25 @@ def decode_jwt_payload(token):
 
 def validate_token(token):
     claims = decode_jwt_payload(token)
-    expected_issuer = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}"
-    if claims.get("iss") != expected_issuer:
-        raise ValueError("Invalid issuer")
+    issuer = claims.get("iss", "")
+
     if claims.get("exp", 0) < time.time():
         raise ValueError("Token expired")
-    if claims.get("token_use") != "id":
-        raise ValueError("Not an ID token")
-    return claims
+
+    # Cognito ID token
+    expected_cognito = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}"
+    if issuer == expected_cognito:
+        if claims.get("token_use") != "id":
+            raise ValueError("Not an ID token")
+        return claims
+
+    # Google ID token
+    if issuer in ("accounts.google.com", "https://accounts.google.com"):
+        if GOOGLE_CLIENT_ID and claims.get("aud") != GOOGLE_CLIENT_ID:
+            raise ValueError("Invalid audience")
+        return claims
+
+    raise ValueError("Invalid issuer")
 
 
 def lambda_handler(event, context):

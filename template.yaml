@@ -126,6 +126,7 @@ Resources:
         Variables:
           COGNITO_USER_POOL_ID: !Ref CognitoUserPool
           COGNITO_REGION: !Sub "${AWS::Region}"
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref ConnectionsTable
