@@ -1,0 +1,14 @@
+# SAM build artifacts
+.aws-sam/
+samconfig.toml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node/frontend (future)
+node_modules/
+dist/
+.env
+.direnv
