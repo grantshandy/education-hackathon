@@ -23,6 +23,7 @@ export function useStudyBuddy(): StudyBuddyState {
   const ws = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const destroyed = useRef(false)
+  const pendingMessages = useRef<string[]>([])
   const [connected, setConnected] = useState(false)
   const [appState, setAppState] = useState<AppState>('idle')
   const [transcript, setTranscript] = useState<StudyBuddyState['transcript']>([])
@@ -38,6 +39,8 @@ export function useStudyBuddy(): StudyBuddyState {
 
     socket.onopen = () => {
       setConnected(true)
+      const queued = pendingMessages.current.splice(0)
+      queued.forEach((msg) => socket.send(msg))
     }
 
     socket.onclose = () => {
@@ -48,8 +51,7 @@ export function useStudyBuddy(): StudyBuddyState {
     }
 
     socket.onerror = () => {
-      // onclose fires after onerror, so reconnect logic lives there
-      socket.close()
+      // onclose fires automatically after onerror; reconnect logic lives there
     }
 
     socket.onmessage = (event) => {
@@ -114,9 +116,13 @@ export function useStudyBuddy(): StudyBuddyState {
   }
 
   const send = useCallback((text: string) => {
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) return
     setTranscript((prev) => [...prev, { role: 'user', text }])
-    ws.current.send(JSON.stringify({ action: 'message', text }))
+    const payload = JSON.stringify({ action: 'message', text })
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(payload)
+    } else {
+      pendingMessages.current.push(payload)
+    }
   }, [])
 
   return { appState, transcript, currentViseme, send, connected }
