@@ -2,18 +2,19 @@ import { useState } from 'react'
 import LoginPage from './LoginPage'
 import SignupPage from './SignupPage'
 import HomePage from './HomePage'
+import DashboardPage from './DashboardPage'
 import StudySession from './StudySession'
 
-type Page = 'login' | 'signup' | 'home' | 'session'
+type Page = 'home' | 'login' | 'signup' | 'dashboard' | 'session'
 
 export default function App() {
-  const [page, setPage] = useState<Page>('login')
+  const [page, setPage] = useState<Page>('home')
 
   switch (page) {
     case 'login':
       return (
         <LoginPage
-          onLogin={() => setPage('home')}
+          onLogin={() => setPage('dashboard')}
           onSwitchToSignup={() => setPage('signup')}
           onBack={() => setPage('home')}
         />
@@ -21,14 +22,16 @@ export default function App() {
     case 'signup':
       return (
         <SignupPage
-          onSignup={() => setPage('home')}
+          onSignup={() => setPage('dashboard')}
           onSwitchToLogin={() => setPage('login')}
           onBack={() => setPage('home')}
         />
       )
+    case 'dashboard':
+      return <DashboardPage onStartSession={() => setPage('session')} />
     case 'session':
-      return <StudySession onExit={() => setPage('home')} />
+      return <StudySession onExit={() => setPage('dashboard')} />
     default:
-      return <HomePage onStart={() => setPage('session')} />
+      return <HomePage onStart={() => setPage('login')} />
   }
 }
