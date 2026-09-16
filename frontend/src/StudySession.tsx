@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { CharacterCanvas } from './CharacterCanvas'
+import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
@@ -22,34 +23,52 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
   const { getIdToken } = useAuth()
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken)
   const [input, setInput] = useState('')
+  const [charX, setCharX] = useState(CHAR_X)
+  const [charY, setCharY] = useState(CHAR_Y)
+  const [charScale, setCharScale] = useState(CHAR_SCALE)
+  const activeX = DEV_OVERLAY ? charX : CHAR_X
+  const activeY = DEV_OVERLAY ? charY : CHAR_Y
+  const activeScale = DEV_OVERLAY ? charScale : CHAR_SCALE
   const [showPostStudy, setShowPostStudy] = useState(false)
   const [muted, setMuted] = useState(false)
-  const [musicSrc, setMusicSrc] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const musicRef = useRef<HTMLAudioElement>(null)
+  const fadeRef = useRef<number | null>(null)
   const [sessionStart] = useState(() => new Date())
 
-  // Only mount audio element if the file actually exists (HEAD check prevents
-  // the "Content-Type text/html" error when the file hasn't been downloaded yet)
-  useEffect(() => {
-    fetch('/lofi-music.mp3', { method: 'HEAD' })
-      .then(r => {
-        const ct = r.headers.get('content-type') ?? ''
-        if (r.ok && ct.startsWith('audio')) setMusicSrc('/lofi-music.mp3')
-      })
-      .catch(() => {})
-  }, [])
+  const MUSIC_VOL_IDLE    = 0.35
+  const MUSIC_VOL_TALKING = 0.08
 
   useEffect(() => {
     const audio = musicRef.current
-    if (!audio || !musicSrc) return
-    audio.volume = 0.35
+    if (!audio) return
+    audio.volume = MUSIC_VOL_IDLE
     const tryPlay = () => audio.play().catch(() => {})
     tryPlay()
     const resume = () => { tryPlay(); document.removeEventListener('click', resume) }
     document.addEventListener('click', resume)
     return () => document.removeEventListener('click', resume)
-  }, [musicSrc])
+  }, [])
+
+  // Fade music volume when AI is talking
+  useEffect(() => {
+    const audio = musicRef.current
+    if (!audio) return
+    const target = appState === 'idle' ? MUSIC_VOL_IDLE : MUSIC_VOL_TALKING
+    if (fadeRef.current !== null) clearInterval(fadeRef.current)
+    const step = (target - audio.volume) / 20
+    fadeRef.current = window.setInterval(() => {
+      if (!audio) return
+      const next = audio.volume + step
+      if ((step > 0 && next >= target) || (step < 0 && next <= target)) {
+        audio.volume = target
+        if (fadeRef.current !== null) clearInterval(fadeRef.current)
+      } else {
+        audio.volume = Math.max(0, Math.min(1, next))
+      }
+    }, 25)
+    return () => { if (fadeRef.current !== null) clearInterval(fadeRef.current) }
+  }, [appState])
 
   function handleSend() {
     const text = input.trim()
@@ -82,7 +101,7 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
   return (
     <div className="h-screen flex flex-col bg-cream-100 font-instrument overflow-hidden">
 
-      {musicSrc && <audio ref={musicRef} src={musicSrc} loop hidden />}
+      <audio ref={musicRef} src={MUSIC_URL} loop hidden />
 
       {/* Nav */}
       <nav className="h-16 px-8 flex items-center justify-between border-b border-cream-border bg-white shrink-0">
@@ -137,16 +156,31 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
 
         {/* Left — character */}
         <div className="flex-[55] flex flex-col min-w-0">
-          <div className="flex-1 relative bg-gray-900 rounded-2xl overflow-hidden flex items-center justify-center">
-            <CharacterCanvas
-              restSrc={REST_IMAGE}
-              attentionSrc={ATTENTION_IMAGE}
-              viseme={currentViseme}
-              talking={appState === 'talking'}
-            />
+          <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
+            <div className="relative w-full h-full" style={{ maxWidth: 'calc((100vh - 200px) * 4/3)' }}>
+            <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-900">
+            <LofiBackground />
+            <div
+              className="absolute z-10"
+              style={{
+                left:       `${activeX}%`,
+                top:        `${activeY}%`,
+                height:     `${activeScale}%`,
+                width:      'auto',
+                opacity:    DEV_OVERLAY ? 0.5 : (appState === 'idle' ? 0 : 1),
+                transition: DEV_OVERLAY ? undefined : 'opacity 300ms ease',
+              }}
+            >
+              <CharacterCanvas
+                restSrc={REST_IMAGE}
+                attentionSrc={ATTENTION_IMAGE}
+                viseme={currentViseme}
+                talking={appState === 'talking'}
+              />
+            </div>
 
             {/* Status overlay — top left */}
-            <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-lg">
               <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-gray-400'}`} />
               <div className="flex flex-col">
                 <span className="text-white text-xs font-semibold leading-tight">Study Buddy</span>
@@ -175,6 +209,8 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
               <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
                 <Settings className="w-5 h-5" />
               </button>
+            </div>
+            </div>
             </div>
           </div>
         </div>
@@ -258,7 +294,26 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
         </div>
       </div>
 
-      {showPostStudy && (
+      {DEV_OVERLAY && (
+        <div className="shrink-0 px-8 py-3 bg-black/80 text-white text-xs flex items-center gap-6 font-mono">
+          <span className="text-white/50">overlay</span>
+          <label className="flex items-center gap-2">
+            X <span className="w-12 text-right">{charX.toFixed(1)}%</span>
+            <input type="range" min={0} max={100} step={0.1} value={charX} onChange={e => setCharX(Number(e.target.value))} className="w-32" />
+          </label>
+          <label className="flex items-center gap-2">
+            Y <span className="w-12 text-right">{charY.toFixed(1)}%</span>
+            <input type="range" min={0} max={100} step={0.1} value={charY} onChange={e => setCharY(Number(e.target.value))} className="w-32" />
+          </label>
+          <label className="flex items-center gap-2">
+            H% <span className="w-12 text-right">{charScale.toFixed(1)}%</span>
+            <input type="range" min={1} max={100} step={0.1} value={charScale} onChange={e => setCharScale(Number(e.target.value))} className="w-32" />
+          </label>
+          <span className="text-yellow-300 select-all">CHAR_X={charX.toFixed(1)} CHAR_Y={charY.toFixed(1)} CHAR_SCALE={charScale.toFixed(1)}</span>
+        </div>
+      )}
+
+{showPostStudy && (
         <PostStudyModal
           onClose={() => setShowPostStudy(false)}
           onBackToDashboard={onExit}

@@ -13,6 +13,7 @@ pkgs.mkShell {
 
     # Frontend
     nodejs_22
+    imagemagick
 
     # Dev tools
     jq

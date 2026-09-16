@@ -3,7 +3,7 @@ REGION       ?= us-east-1
 BUCKET       ?= education-hackathon-frontend-247826798819
 DIST_ID      ?= E3EGKG3A8YBGC2
 
-.PHONY: build deploy update deploy-frontend logs
+.PHONY: build deploy update deploy-frontend logs download-lofi
 
 # ── Backend ───────────────────────────────────────────────────────────────
 
@@ -18,6 +18,9 @@ update: build
 
 logs:
 	sam logs -n $(FUNCTION) --stack-name $(STACK_NAME) --region $(REGION) --tail
+
+download-lofi:
+	bash scripts/download-lofi.sh
 
 # ── Frontend ──────────────────────────────────────────────────────────────
 

@@ -266,6 +266,11 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "${AWS::StackName}-audio-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
       CorsConfiguration:
         CorsRules:
           - AllowedOrigins: ["*"]
@@ -277,6 +282,19 @@ Resources:
           - Id: DeleteOldAudio
             Status: Enabled
             ExpirationInDays: 1
+
+  AudioBucketPublicMediaPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AudioBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource:
+              - !Sub "${AudioBucket.Arn}/lofi-video.mp4"
+              - !Sub "${AudioBucket.Arn}/lofi-music.mp3"
 
   # ── Frontend hosting ─────────────────────────────────────────────────────
   FrontendBucket:
