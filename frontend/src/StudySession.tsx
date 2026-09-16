@@ -53,7 +53,7 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
 
   function handleSend() {
     const text = input.trim()
-    if (!text || appState !== 'idle') return
+    if (!text || !connected) return
     send(text)
     setInput('')
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -242,13 +242,13 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
                 className="flex-1 text-sm text-ink placeholder-ink-muted outline-none bg-transparent min-w-0"
                 placeholder={connected ? 'Message StudyMate...' : 'Connecting…'}
                 value={input}
-                disabled={!connected || appState !== 'idle'}
+                disabled={!connected}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               />
               <button
                 className="w-9 h-9 rounded-full bg-indigo hover:bg-indigo-dark disabled:opacity-40 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                disabled={!connected || appState !== 'idle' || !input.trim()}
+                disabled={!connected || !input.trim()}
                 onClick={handleSend}
               >
                 <ArrowUp className="w-4 h-4" />

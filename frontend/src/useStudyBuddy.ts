@@ -89,10 +89,20 @@ export function useStudyBuddy(
     }
   }, [connect])
 
-  async function playResponse(audioUrl: string, visemes: Viseme[]) {
-    console.log('[audio] playResponse called, url:', audioUrl?.slice(0, 80))
+  function stopAudio() {
     visemeTimers.current.forEach(clearTimeout)
     visemeTimers.current = []
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.onended = null
+      audioRef.current = null
+    }
+    setCurrentViseme('sil')
+  }
+
+  async function playResponse(audioUrl: string, visemes: Viseme[]) {
+    console.log('[audio] playResponse called, url:', audioUrl?.slice(0, 80))
+    stopAudio()
 
     // Start transition animation immediately while audio fetches in parallel
     const TRANSITION_DELAY_MS = 1650
@@ -132,6 +142,8 @@ export function useStudyBuddy(
   }
 
   const send = useCallback((text: string) => {
+    stopAudio()
+    setAppState('thinking')
     setTranscript((prev) => [...prev, { role: 'user', text }])
     const payload = JSON.stringify({ action: 'message', text })
     if (ws.current?.readyState === WebSocket.OPEN) {
