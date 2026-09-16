@@ -4,7 +4,7 @@ Description: Lofi study buddy - WebSocket backend
 
 Globals:
   Function:
-    Runtime: python3.12
+    Runtime: python3.11
     Timeout: 30
     Environment:
       Variables:
@@ -18,8 +18,87 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: us.anthropic.claude-sonnet-4-6
+  GoogleClientId:
+    Type: String
+  GoogleClientSecret:
+    Type: String
+    NoEcho: true
 
 Resources:
+
+  # ── Cognito ──────────────────────────────────────────────────────────────
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AWS::StackName}-users"
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: false
+
+  CognitoGoogleIdP:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ProviderName: Google
+      ProviderType: Google
+      ProviderDetails:
+        client_id: !Ref GoogleClientId
+        client_secret: !Ref GoogleClientSecret
+        authorize_scopes: "email openid profile"
+      AttributeMapping:
+        email: email
+        name: name
+        username: sub
+
+  CognitoUserPoolClient:
+    DependsOn: CognitoGoogleIdP
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ClientName: !Sub "${AWS::StackName}-web"
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+        - Google
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      CallbackURLs:
+        - http://localhost:5173/
+        - http://localhost:5174/
+        - http://localhost:5175/
+        - !Sub "https://${CloudFrontDistribution.DomainName}/"
+      LogoutURLs:
+        - http://localhost:5173/
+        - http://localhost:5174/
+        - http://localhost:5175/
+        - !Sub "https://${CloudFrontDistribution.DomainName}/"
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "${AWS::StackName}-${AWS::AccountId}"
+      UserPoolId: !Ref CognitoUserPool
 
   # ── DynamoDB ──────────────────────────────────────────────────────────────
   ConnectionsTable:
@@ -43,6 +122,10 @@ Resources:
     Properties:
       CodeUri: backend/functions/ws_connect/
       Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+          COGNITO_REGION: !Sub "${AWS::Region}"
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref ConnectionsTable
@@ -257,3 +340,9 @@ Outputs:
   ConnectionsTableName:
     Description: DynamoDB connections table
     Value: !Ref ConnectionsTable
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !Ref CognitoUserPoolClient

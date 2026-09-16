@@ -105,9 +105,11 @@ const SESSIONS = [
 export default function DashboardPage({
   onStartSession,
   onOpenCourse,
+  onLogout,
 }: {
   onStartSession: () => void
   onOpenCourse: () => void
+  onLogout?: () => void
 }) {
   const [showStartModal, setShowStartModal] = useState(false)
   const [showAddCourseModal, setShowAddCourseModal] = useState(false)
@@ -130,6 +132,12 @@ export default function DashboardPage({
           <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors">
             Settings
           </span>
+          <button
+            onClick={onLogout}
+            className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors"
+          >
+            Sign out
+          </button>
           <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
         </div>
       </nav>

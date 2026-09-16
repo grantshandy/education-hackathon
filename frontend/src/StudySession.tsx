@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { CharacterCanvas } from './CharacterCanvas'
 import PostStudyModal from './PostStudyModal'
@@ -18,7 +19,8 @@ const REST_IMAGE      = '/studying.png'
 const ATTENTION_IMAGE = '/at-attention.jpg'
 
 export default function StudySession({ onExit }: { onExit: () => void }) {
-  const { appState, transcript, currentViseme, send, connected } = useStudyBuddy()
+  const { getIdToken } = useAuth()
+  const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken)
   const [input, setInput] = useState('')
   const [showPostStudy, setShowPostStudy] = useState(false)
   const [muted, setMuted] = useState(false)

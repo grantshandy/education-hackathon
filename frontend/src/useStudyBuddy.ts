@@ -19,7 +19,9 @@ export interface StudyBuddyState {
 const WS_URL = import.meta.env.VITE_WS_URL as string
 const RECONNECT_DELAY_MS = 2000
 
-export function useStudyBuddy(): StudyBuddyState {
+export function useStudyBuddy(
+  getToken?: () => Promise<string | null>
+): StudyBuddyState {
   const ws = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
   const destroyed = useRef(false)
@@ -31,10 +33,18 @@ export function useStudyBuddy(): StudyBuddyState {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const visemeTimers = useRef<number[]>([])
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (!WS_URL || destroyed.current) return
 
-    const socket = new WebSocket(WS_URL)
+    let url = WS_URL
+    if (getToken) {
+      const token = await getToken()
+      if (token) {
+        url = `${WS_URL}?token=${encodeURIComponent(token)}`
+      }
+    }
+
+    const socket = new WebSocket(url)
     ws.current = socket
 
     socket.onopen = () => {
@@ -66,7 +76,7 @@ export function useStudyBuddy(): StudyBuddyState {
         playResponse(msg.audio_url, msg.visemes)
       }
     }
-  }, [])
+  }, [getToken])
 
   useEffect(() => {
     destroyed.current = false

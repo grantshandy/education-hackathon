@@ -35,7 +35,13 @@ const STATS = [
   { icon: Flame, label: 'Current Streak', value: '5 days' },
 ]
 
-export default function HomePage({ onStart }: { onStart: () => void }) {
+export default function HomePage({
+  onStart,
+  onDebugSession,
+}: {
+  onStart: () => void
+  onDebugSession?: () => void
+}) {
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col font-geist">
       {/* Navigation */}
@@ -74,13 +80,23 @@ export default function HomePage({ onStart }: { onStart: () => void }) {
               upload PDFs, lecture slides, and notes instantly.
             </p>
           </div>
-          <button
-            onClick={onStart}
-            className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(129,140,248,0.25)]"
-          >
-            <PlayCircle className="w-5 h-5" />
-            Start Study Session
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onStart}
+              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(129,140,248,0.25)]"
+            >
+              <PlayCircle className="w-5 h-5" />
+              Start Study Session
+            </button>
+            {onDebugSession && (
+              <button
+                onClick={onDebugSession}
+                className="flex items-center gap-2 px-6 py-4 rounded-xl border border-dashed border-ink-muted text-ink-muted text-sm font-medium hover:border-ink-secondary hover:text-ink-secondary transition-colors cursor-pointer"
+              >
+                Skip to Session (Dev)
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 bg-white p-4 rounded-3xl border border-cream-border shadow-[0_12px_24px_rgba(129,140,248,0.07)]">
