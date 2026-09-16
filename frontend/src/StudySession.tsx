@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
+import { api } from './api'
 import { CharacterCanvas } from './CharacterCanvas'
 import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
@@ -19,7 +20,7 @@ import {
 const REST_IMAGE      = '/studying.png'
 const ATTENTION_IMAGE = '/at-attention.jpg'
 
-export default function StudySession({ onExit }: { onExit: () => void }) {
+export default function StudySession({ sessionId, onExit }: { sessionId: string | null; onExit: () => void }) {
   const { getIdToken } = useAuth()
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken)
   const [input, setInput] = useState('')
@@ -30,6 +31,8 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
   const activeY = DEV_OVERLAY ? charY : CHAR_Y
   const activeScale = DEV_OVERLAY ? charScale : CHAR_SCALE
   const [showPostStudy, setShowPostStudy] = useState(false)
+  const [generatedSummary, setGeneratedSummary] = useState<string | null>(null)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
   const [muted, setMuted] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const musicRef = useRef<HTMLAudioElement>(null)
@@ -316,8 +319,40 @@ export default function StudySession({ onExit }: { onExit: () => void }) {
 {showPostStudy && (
         <PostStudyModal
           onClose={() => setShowPostStudy(false)}
-          onBackToDashboard={onExit}
-          onGenerateSummary={() => {}}
+          onBackToDashboard={async () => {
+            if (sessionId) {
+              const durationMinutes = Math.max(1, Math.round((Date.now() - sessionStart.getTime()) / 60000))
+              try {
+                await api.updateSession(sessionId, {
+                  endTime: new Date().toISOString(),
+                  durationMinutes,
+                  messageCount: transcript.length,
+                  status: 'completed',
+                  transcript: transcript.map((m) => ({ role: m.role, text: m.text })),
+                }, getIdToken)
+              } catch (e) {
+                console.error('Failed to save session:', e)
+              }
+            }
+            onExit()
+          }}
+          onGenerateSummary={async () => {
+            if (!sessionId || generatingSummary || transcript.length === 0) return
+            setGeneratingSummary(true)
+            try {
+              await api.updateSession(sessionId, {
+                transcript: transcript.map((m) => ({ role: m.role, text: m.text })),
+              }, getIdToken)
+              const { summary } = await api.generateSummary(sessionId, getIdToken)
+              setGeneratedSummary(summary)
+            } catch (e) {
+              console.error('Failed to generate summary:', e)
+            } finally {
+              setGeneratingSummary(false)
+            }
+          }}
+          generatingSummary={generatingSummary}
+          generatedSummary={generatedSummary}
           stats={{
             timeStudied: `${Math.max(1, Math.round((Date.now() - sessionStart.getTime()) / 60000))} min`,
             messages: transcript.length,

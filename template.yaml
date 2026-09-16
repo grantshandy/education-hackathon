@@ -9,6 +9,8 @@ Globals:
     Environment:
       Variables:
         CONNECTIONS_TABLE: !Ref ConnectionsTable
+        COURSES_TABLE: !Ref CoursesTable
+        SESSIONS_TABLE: !Ref SessionsTable
         STAGE: !Ref Stage
 
 Parameters:
@@ -116,6 +118,157 @@ Resources:
         AttributeName: ttl
         Enabled: true
 
+  CoursesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-courses"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: courseId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: courseId
+          KeyType: RANGE
+
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-sessions"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: sessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: sessionId
+          KeyType: RANGE
+
+  # ── HTTP API ─────────────────────────────────────────────────────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration:
+        AllowOrigins:
+          - "http://localhost:5173"
+          - "http://localhost:5174"
+          - "http://localhost:5175"
+          - !Sub "https://${CloudFrontDistribution.DomainName}"
+        AllowMethods:
+          - GET
+          - POST
+          - PATCH
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Authorization
+          - Content-Type
+        MaxAge: 300
+
+  CoursesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/api_courses/
+      Handler: handler.lambda_handler
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+          COGNITO_REGION: !Sub "${AWS::Region}"
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CoursesTable
+      Events:
+        ListCourses:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /courses
+            Method: GET
+        CreateCourse:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /courses
+            Method: POST
+        UpdateCourse:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /courses/{courseId}
+            Method: PATCH
+        DeleteCourse:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /courses/{courseId}
+            Method: DELETE
+
+  SessionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/api_sessions/
+      Handler: handler.lambda_handler
+      Timeout: 60
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+          COGNITO_REGION: !Sub "${AWS::Region}"
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        ListSessions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions
+            Method: GET
+        CreateSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions
+            Method: POST
+        GetSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}
+            Method: GET
+        UpdateSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}
+            Method: PATCH
+        DeleteSession:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}
+            Method: DELETE
+        GenerateSummary:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/summary
+            Method: POST
+
   # ── Lambda functions ──────────────────────────────────────────────────────
   ConnectFunction:
     Type: AWS::Serverless::Function
@@ -126,6 +279,7 @@ Resources:
         Variables:
           COGNITO_USER_POOL_ID: !Ref CognitoUserPool
           COGNITO_REGION: !Sub "${AWS::Region}"
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref ConnectionsTable
@@ -375,3 +529,12 @@ Outputs:
   CognitoClientId:
     Description: Cognito App Client ID
     Value: !Ref CognitoUserPoolClient
+  HttpApiUrl:
+    Description: HTTP API endpoint — set as VITE_API_URL in frontend/.env.local
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}"
+  CoursesTableName:
+    Description: DynamoDB courses table
+    Value: !Ref CoursesTable
+  SessionsTableName:
+    Description: DynamoDB sessions table
+    Value: !Ref SessionsTable

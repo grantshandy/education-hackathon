@@ -5,25 +5,19 @@ import {
   UploadCloud,
   FileText,
 } from 'lucide-react'
-
-const COURSE_OPTIONS = [
-  'No Course',
-  'Algorithms',
-  'Organic Chemistry',
-  'Linear Algebra',
-  'US History',
-  'Intro to Psychology',
-]
+import type { Course } from './api'
 
 export default function StartSessionModal({
+  courses,
   onClose,
   onStart,
 }: {
+  courses: Course[]
   onClose: () => void
-  onStart: () => void
+  onStart: (title: string, courseId: string, courseName: string) => void
 }) {
   const [sessionName, setSessionName] = useState('Study Session')
-  const [course, setCourse] = useState('No Course')
+  const [selectedCourseId, setSelectedCourseId] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [dragging, setDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -35,6 +29,11 @@ export default function StartSessionModal({
 
   function removeFile(index: number) {
     setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function handleStart() {
+    const course = courses.find((c) => c.courseId === selectedCourseId)
+    onStart(sessionName, selectedCourseId, course?.name || '')
   }
 
   return (
@@ -86,13 +85,14 @@ export default function StartSessionModal({
             </label>
             <div className="relative">
               <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
                 className="w-full h-11 px-4 pr-10 border border-cream-muted rounded-[10px] text-[15px] text-[#5C5A80] outline-none focus:ring-2 focus:ring-indigo/20 focus:border-indigo transition-colors bg-white appearance-none cursor-pointer"
               >
-                {COURSE_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+                <option value="">No Course</option>
+                {courses.map((course) => (
+                  <option key={course.courseId} value={course.courseId}>
+                    {course.name}
                   </option>
                 ))}
               </select>
@@ -184,7 +184,7 @@ export default function StartSessionModal({
             Cancel
           </button>
           <button
-            onClick={onStart}
+            onClick={handleStart}
             className="flex items-center gap-2 bg-indigo hover:bg-indigo-dark text-white font-semibold text-[15px] px-6 py-3 rounded-full transition-colors cursor-pointer shadow-[0_4px_12px_rgba(79,70,229,0.15)]"
           >
             Start Study Session
