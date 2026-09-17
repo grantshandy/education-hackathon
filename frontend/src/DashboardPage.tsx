@@ -141,12 +141,6 @@ export default function DashboardPage({
           <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <button
-            onClick={onLogout}
-            className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors"
-          >
-            Sign out
-          </button>
           <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
         </div>
       </nav>
