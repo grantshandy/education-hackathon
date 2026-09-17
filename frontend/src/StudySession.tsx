@@ -47,6 +47,14 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
   const musicRef = useRef<HTMLAudioElement>(null)
   const fadeRef = useRef<number | null>(null)
   const [sessionStart] = useState(() => new Date())
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - sessionStart.getTime()) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [sessionStart])
 
   const MUSIC_VOL_IDLE    = 0.35
   const MUSIC_VOL_TALKING = 0.08
@@ -154,6 +162,9 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
             Home
           </span>
           <span onClick={onExit} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Dashboard
+          </span>
+          <span onClick={onExit} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
@@ -165,14 +176,14 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
       {/* Session header */}
       <div className="px-8 py-4 flex items-center justify-between shrink-0">
-        <div>
+        <div className="flex items-center gap-4">
           <h1 className="font-bold text-2xl text-indigo-dark">
             Study Session
           </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <div className="w-2 h-2 rounded-full bg-[#C24B32]" />
-            <span className="text-sm text-[#6B5B50]">
-              Started {startTime}
+          <div className="flex items-center gap-2 bg-card border border-card-border rounded-lg px-3 py-1.5">
+            <div className="w-2 h-2 rounded-full bg-[#C24B32] animate-pulse" />
+            <span className="text-sm font-mono font-semibold text-indigo-dark tabular-nums">
+              {String(Math.floor(elapsed / 3600)).padStart(2, '0')}:{String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0')}:{String(elapsed % 60).padStart(2, '0')}
             </span>
           </div>
         </div>

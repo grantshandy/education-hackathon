@@ -3,6 +3,10 @@ import {
   GraduationCap,
   PlayCircle,
   Plus,
+  Clock,
+  Flame,
+  BookOpen,
+  ChevronRight,
 } from 'lucide-react'
 import StartSessionModal from './StartSessionModal'
 import AddCourseModal from './AddCourseModal'
@@ -82,6 +86,9 @@ export default function DashboardPage({
             Home
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Dashboard
+          </span>
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
@@ -98,20 +105,62 @@ export default function DashboardPage({
       </nav>
 
       {/* Main */}
-      <main className="flex-1 px-[120px] pt-16 pb-20 flex flex-col gap-16">
-        {/* Hero */}
-        <section className="flex flex-col items-center gap-6">
-          <h1 className="font-bold text-[44px] text-indigo-dark text-center">
-            {greeting}, {user?.name?.split(' ')[0] || 'there'}.
-          </h1>
-          <button
-            onClick={() => setShowStartModal(true)}
-            className="flex items-center gap-2.5 bg-indigo hover:bg-indigo-dark px-8 py-[18px] rounded-full text-white font-semibold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(192,106,69,0.2)]"
-          >
-            <PlayCircle className="w-5 h-5" />
-            Start Study Session
-          </button>
+      <main className="flex-1 px-[120px] pt-10 pb-20 flex flex-col gap-10">
+        {/* Welcome banner */}
+        <section className="flex items-stretch bg-card border border-card-border rounded-3xl overflow-hidden">
+          <div className="flex-1 p-10 flex flex-col justify-center gap-5">
+            <h1 className="font-bold text-[36px] text-indigo-dark leading-tight">
+              {greeting}, {user?.name?.split(' ')[0] || 'there'}.
+            </h1>
+            <p className="text-base text-ink-secondary leading-relaxed max-w-md">
+              Ready to pick up where you left off? Start a new session or continue reviewing your courses.
+            </p>
+            <button
+              onClick={() => setShowStartModal(true)}
+              className="flex items-center gap-2.5 bg-indigo hover:bg-indigo-dark px-7 py-3.5 rounded-xl text-white font-semibold text-[15px] transition-colors cursor-pointer shadow-[0_8px_24px_rgba(192,106,69,0.2)] w-fit"
+            >
+              <PlayCircle className="w-5 h-5" />
+              Start Study Session
+            </button>
+          </div>
+          <div className="w-[320px] shrink-0">
+            <img
+              src="/lofi-hero.png"
+              alt="Lo-fi study illustration"
+              className="w-full h-full object-cover"
+            />
+          </div>
         </section>
+
+        {/* Quick stats */}
+        {!loadingData && (
+          <section className="flex gap-4">
+            {(() => {
+              const completed = sessions.filter(s => s.status === 'completed')
+              const totalMin = completed.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0)
+              const hours = Math.floor(totalMin / 60)
+              const mins = totalMin % 60
+              const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+              const uniqueDays = new Set(completed.map(s => s.startTime.slice(0, 10))).size
+              return [
+                { icon: Clock, label: 'Total Study Time', value: timeStr },
+                { icon: BookOpen, label: 'Sessions Completed', value: String(completed.length) },
+                { icon: Flame, label: 'Courses Active', value: String(courses.length) },
+                { icon: Flame, label: 'Days Studied', value: String(uniqueDays) },
+              ]
+            })().map((stat) => (
+              <div key={stat.label} className="flex-1 flex items-center gap-3.5 bg-card border border-card-border rounded-2xl px-5 py-4">
+                <div className="w-10 h-10 rounded-xl bg-indigo-bg flex items-center justify-center shrink-0">
+                  <stat.icon className="w-[18px] h-[18px] text-indigo" />
+                </div>
+                <div>
+                  <span className="font-bold text-xl text-indigo-dark block leading-tight">{stat.value}</span>
+                  <span className="text-xs text-ink-secondary">{stat.label}</span>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* Courses */}
         <section className="flex flex-col gap-5">
@@ -165,6 +214,48 @@ export default function DashboardPage({
           )}
         </section>
 
+        {/* Recent Activity */}
+        {!loadingData && (() => {
+          const recent = sessions
+            .filter(s => s.status === 'completed')
+            .sort((a, b) => b.startTime.localeCompare(a.startTime))
+            .slice(0, 3)
+          if (recent.length === 0) return null
+          return (
+            <section className="flex flex-col gap-5">
+              <h2 className="font-bold text-[22px] text-indigo-dark">
+                Recent Activity
+              </h2>
+              <div className="flex flex-col bg-card border border-card-border rounded-2xl divide-y divide-card-border">
+                {recent.map((session) => {
+                  const date = new Date(session.startTime)
+                  const timeAgo = getTimeAgo(date)
+                  return (
+                    <div
+                      key={session.sessionId}
+                      onClick={() => {
+                        const course = courses.find(c => c.courseId === session.courseId)
+                        if (course) onOpenCourse(course.courseId)
+                      }}
+                      className="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-cream-100/50 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-indigo-bg flex items-center justify-center shrink-0">
+                        <BookOpen className="w-[18px] h-[18px] text-indigo" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-[15px] text-indigo-dark block truncate">{session.title}</span>
+                        <span className="text-sm text-ink-secondary">{session.courseName} &middot; {session.durationMinutes} min</span>
+                      </div>
+                      <span className="text-sm text-ink-muted shrink-0">{timeAgo}</span>
+                      <ChevronRight className="w-4 h-4 text-ink-muted shrink-0" />
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })()}
+
       </main>
 
       {showStartModal && (
@@ -190,4 +281,13 @@ function getGreeting() {
   if (hour < 12) return 'Good morning'
   if (hour < 17) return 'Good afternoon'
   return 'Good evening'
+}
+
+function getTimeAgo(date: Date): string {
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (diff < 60) return 'Just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 172800) return 'Yesterday'
+  return `${Math.floor(diff / 86400)}d ago`
 }
