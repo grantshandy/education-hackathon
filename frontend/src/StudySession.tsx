@@ -37,6 +37,7 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [debugLog, setDebugLog] = useState<string[]>([])
   const [attachedFiles, setAttachedFiles] = useState<{ name: string; status: 'uploading' | 'ready' | 'error' }[]>([])
+  const [isTranscribing, setIsTranscribing] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   function dbg(msg: string) {
@@ -221,6 +222,7 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
       if (!connected) return
       const blob = new Blob(chunks, { type: mimeType })
       dbg(`uploading audio blob size=${blob.size}`)
+      setIsTranscribing(true)
       try {
         const { text } = await api.transcribeAudio(blob, getIdToken)
         dbg(`transcribed: ${text}`)
@@ -232,6 +234,8 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
       } catch (e) {
         dbg(`transcribe error: ${e}`)
         console.error('[transcribe] error:', e)
+      } finally {
+        setIsTranscribing(false)
       }
     }
 
@@ -463,7 +467,21 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
               ))
             )}
 
-            {/* Typing indicator */}
+            {/* Transcribing indicator */}
+            {isTranscribing && (
+              <div className="flex justify-end">
+                <div className="bg-indigo/10 border border-indigo/20 rounded-2xl rounded-tr-sm px-4 py-3 text-sm text-indigo flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo animate-bounce [animation-delay:0ms]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo animate-bounce [animation-delay:150ms]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo animate-bounce [animation-delay:300ms]" />
+                  </div>
+                  <span>Transcribing…</span>
+                </div>
+              </div>
+            )}
+
+            {/* Thinking indicator */}
             {appState === 'thinking' && (
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-full bg-indigo flex items-center justify-center shrink-0 mt-0.5">
