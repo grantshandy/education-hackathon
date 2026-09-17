@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const BUCKET = 'https://education-hackathon-audio-247826798819.s3.amazonaws.com'
 
@@ -15,8 +15,16 @@ export const CHAR_SCALE = 93.0  // character height as % of video height
 export const DEV_OVERLAY = false  // set true to show sliders + 50% opacity
 // ─────────────────────────────────────────────────────────────────────────
 
-export function LofiBackground() {
+export interface LofiBackgroundHandle {
+  getVideo: () => HTMLVideoElement | null
+}
+
+export const LofiBackground = forwardRef<LofiBackgroundHandle>(function LofiBackground(_, ref) {
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    getVideo: () => videoRef.current,
+  }))
 
   useEffect(() => {
     const video = videoRef.current
@@ -40,4 +48,4 @@ export function LofiBackground() {
       className="absolute inset-0 w-full h-full object-cover"
     />
   )
-}
+})

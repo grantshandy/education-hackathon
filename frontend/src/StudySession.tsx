@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { api } from './api'
 import { CharacterCanvas } from './CharacterCanvas'
-import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY } from './LofiBackground'
+import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY, type LofiBackgroundHandle } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
@@ -18,6 +18,8 @@ import {
   Play,
   Pause,
   Music,
+  X,
+  FileText,
 } from 'lucide-react'
 
 const REST_IMAGE      = '/studying.png'
@@ -38,6 +40,9 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [muted, setMuted] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const lofiRef = useRef<LofiBackgroundHandle>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const musicRef = useRef<HTMLAudioElement>(null)
   const fadeRef = useRef<number | null>(null)
@@ -104,6 +109,20 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     }
   }
 
+  async function togglePiP() {
+    const video = lofiRef.current?.getVideo()
+    if (!video) return
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture()
+      } else {
+        await video.requestPictureInPicture()
+      }
+    } catch (e) {
+      console.error('PiP failed:', e)
+    }
+  }
+
   const statusLabel = !connected
     ? 'Connecting…'
     : appState === 'thinking'
@@ -134,7 +153,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
           <span onClick={onHome} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Home
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onExit} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
@@ -170,11 +189,11 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
       <div className="flex-1 flex px-8 pb-6 gap-6 min-h-0">
 
         {/* Left — character */}
-        <div className="flex-[55] flex flex-col min-w-0">
+        <div className="flex-[60] flex flex-col min-w-0">
           <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
             <div className="relative w-full h-full" style={{ maxWidth: 'calc((100vh - 200px) * 4/3)' }}>
             <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-900">
-            <LofiBackground />
+            <LofiBackground ref={lofiRef} />
             <div
               className="absolute z-10"
               style={{
@@ -205,7 +224,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
             {/* Top right icons */}
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
+              <button onClick={togglePiP} className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer" title="Picture-in-Picture">
                 <ExternalLink className="w-4 h-4" />
               </button>
               <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
@@ -231,7 +250,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
         </div>
 
         {/* Right — chat panel */}
-        <div className="flex-[45] flex flex-col min-w-0 min-h-0">
+        <div className="flex-[40] flex flex-col min-w-0 min-h-0">
           {/* Music bar */}
           <div className="shrink-0 flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-indigo-bg flex items-center justify-center shrink-0">
@@ -302,8 +321,38 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
           {/* Input */}
           <div className="pt-4 shrink-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.md,.csv,.png,.jpg,.jpeg"
+              onChange={(e) => {
+                if (e.target.files) setAttachments((prev) => [...prev, ...Array.from(e.target.files!)])
+                e.target.value = ''
+              }}
+            />
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {attachments.map((file, i) => (
+                  <div key={`${file.name}-${i}`} className="flex items-center gap-1.5 bg-cream-100 border border-cream-border rounded-lg px-2.5 py-1.5">
+                    <FileText className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+                    <span className="text-xs text-ink-secondary max-w-[120px] truncate">{file.name}</span>
+                    <button
+                      onClick={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3">
-              <button className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0"
+              >
                 <Paperclip className="w-5 h-5" />
               </button>
               <input

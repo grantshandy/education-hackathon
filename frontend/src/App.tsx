@@ -97,6 +97,7 @@ function AppRoutes() {
       return (
         <HomePage
           onStart={() => setPage('login')}
+          onStudySessions={() => setPage('dashboard')}
           onDebugSession={isDev ? () => { setDebugBypass(true); setPage('session') } : undefined}
         />
       )

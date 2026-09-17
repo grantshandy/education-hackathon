@@ -6,7 +6,9 @@ import {
   Calendar,
   Flame,
   GraduationCap,
+  Headphones,
 } from 'lucide-react'
+import { VIDEO_URL } from './LofiBackground'
 
 const RECENT_SESSIONS = [
   {
@@ -37,9 +39,11 @@ const STATS = [
 
 export default function HomePage({
   onStart,
+  onStudySessions,
   onDebugSession,
 }: {
   onStart: () => void
+  onStudySessions?: () => void
   onDebugSession?: () => void
 }) {
   return (
@@ -56,7 +60,7 @@ export default function HomePage({
           <span className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Home
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
@@ -66,55 +70,52 @@ export default function HomePage({
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="px-20 py-20 flex items-center gap-16">
-        <div className="flex-1 flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <h1 className="font-gabarito font-extrabold text-[56px] leading-[1.1] text-ink">
-              Ready to study?
-            </h1>
-            <p className="text-xl text-ink-secondary leading-relaxed">
-              Study with an AI classmate that understands your course material —
-              upload PDFs, lecture slides, and notes instantly.
-            </p>
+      {/* Hero Section — video background */}
+      <section className="relative h-[520px] overflow-hidden">
+        <video
+          src={VIDEO_URL}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(30,20,12,0.85)] via-[rgba(30,20,12,0.6)] to-[rgba(30,20,12,0.3)]" />
+
+        <div className="relative z-10 h-full flex flex-col justify-center px-20 max-w-2xl gap-6">
+          <div className="flex items-center gap-2">
+            <Headphones className="w-5 h-5 text-indigo-light" />
+            <span className="text-sm font-medium text-white/70 tracking-wide uppercase">Lo-fi Study Companion</span>
           </div>
-          <div className="flex items-center gap-4">
+          <h1 className="font-gabarito font-extrabold text-[56px] leading-[1.05] text-white">
+            Study with a friend who gets it.
+          </h1>
+          <p className="text-lg text-white/70 leading-relaxed">
+            Upload your course materials and study alongside an AI classmate who already
+            understands your lectures — ask questions with your voice, just like talking to a real study partner.
+          </p>
+          <div className="flex items-center gap-4 pt-2">
             <button
               onClick={onStart}
-              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(192,106,69,0.25)]"
+              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(212,137,106,0.4)]"
             >
               <PlayCircle className="w-5 h-5" />
-              Start Study Session
+              Start Studying
             </button>
             {onDebugSession && (
               <button
                 onClick={onDebugSession}
-                className="flex items-center gap-2 px-6 py-4 rounded-xl border border-dashed border-ink-muted text-ink-muted text-sm font-medium hover:border-ink-secondary hover:text-ink-secondary transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-6 py-4 rounded-xl border border-dashed border-white/30 text-white/50 text-sm font-medium hover:border-white/50 hover:text-white/70 transition-colors cursor-pointer"
               >
                 Skip to Session (Dev)
               </button>
             )}
           </div>
         </div>
-
-        <div className="flex-1 bg-card p-4 rounded-3xl border border-card-border shadow-[0_12px_24px_rgba(192,106,69,0.07)]">
-          <img
-            src="/lofi-hero.png"
-            alt="Lo-fi study illustration"
-            className="w-full h-80 object-cover rounded-2xl"
-          />
-          <div className="flex items-center gap-3 px-2 mt-4">
-            <div className="w-2 h-2 rounded-full bg-indigo-light" />
-            <p className="text-[13px] text-ink-secondary">
-              During a session, your AI classmate turns toward you and responds
-              with synchronized speech.
-            </p>
-          </div>
-        </div>
       </section>
 
       {/* Recent Sessions */}
-      <section className="px-20 pb-20 flex flex-col gap-6">
+      <section className="px-20 pt-14 pb-20 flex flex-col gap-6">
         <h2 className="font-gabarito font-bold text-[28px] text-ink">
           Recent Sessions
         </h2>
