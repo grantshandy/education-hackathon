@@ -22,7 +22,7 @@ import { getColorSet, DEFAULT_ICON, ICON_MAP } from './courseStyles'
 export default function DashboardPage({
   onStartSession,
   onOpenCourse,
-  onLogout,
+  onLogout: _onLogout,
   onHome,
   onSettings,
 }: {
@@ -141,7 +141,11 @@ export default function DashboardPage({
           <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light flex items-center justify-center">
+            <span className="text-sm font-bold text-indigo">
+              {user?.email?.charAt(0).toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
       </nav>
 

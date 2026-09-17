@@ -26,7 +26,7 @@ const REST_IMAGE      = '/studying.png'
 const ATTENTION_IMAGE = '/at-attention.png'
 
 export default function StudySession({ sessionId, onExit, onHome, onSettings }: { sessionId: string | null; onExit: () => void; onHome?: () => void; onSettings?: () => void }) {
-  const { getIdToken } = useAuth()
+  const { getIdToken, user } = useAuth()
   const { appState, transcript, currentViseme, send, stopSpeaking, connected } = useStudyBuddy(getIdToken, sessionId)
   const [input, setInput] = useState('')
   const [charX, setCharX] = useState(CHAR_X)
@@ -307,7 +307,11 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
           <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light flex items-center justify-center">
+            <span className="text-sm font-bold text-indigo">
+              {user?.email?.charAt(0).toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
       </nav>
 

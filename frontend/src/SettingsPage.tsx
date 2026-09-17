@@ -36,7 +36,11 @@ export default function SettingsPage({
           <span className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Settings
           </span>
-          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light flex items-center justify-center">
+            <span className="text-sm font-bold text-indigo">
+              {user?.email?.charAt(0).toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
       </nav>
 
