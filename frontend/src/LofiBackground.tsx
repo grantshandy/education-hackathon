@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const BUCKET = 'https://education-hackathon-audio-247826798819.s3.amazonaws.com'
 
@@ -16,8 +16,16 @@ export const DEV_OVERLAY = false  // set true to show character position sliders
 export const DEBUG = false        // set true to show WS status panel and log events
 // ─────────────────────────────────────────────────────────────────────────
 
-export function LofiBackground() {
+export interface LofiBackgroundHandle {
+  getVideo: () => HTMLVideoElement | null
+}
+
+export const LofiBackground = forwardRef<LofiBackgroundHandle>(function LofiBackground(_, ref) {
   const videoRef = useRef<HTMLVideoElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    getVideo: () => videoRef.current,
+  }))
 
   useEffect(() => {
     const video = videoRef.current
@@ -41,4 +49,4 @@ export function LofiBackground() {
       className="absolute inset-0 w-full h-full object-cover pointer-events-none"
     />
   )
-}
+})

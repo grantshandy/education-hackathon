@@ -66,7 +66,7 @@ export default function StartSessionModal({
         <div className="flex flex-col gap-5">
           {/* Session Name */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#5C5A80]">
+            <label className="text-sm font-semibold text-[#6B5B50]">
               Session Name
             </label>
             <input
@@ -74,20 +74,20 @@ export default function StartSessionModal({
               value={sessionName}
               onChange={(e) => setSessionName(e.target.value)}
               placeholder="Study Session"
-              className="h-11 px-4 border border-cream-muted rounded-[10px] text-[15px] text-indigo-dark placeholder-[#5C5A80] outline-none focus:ring-2 focus:ring-indigo/20 focus:border-indigo transition-colors bg-white"
+              className="h-11 px-4 border border-cream-muted rounded-[10px] text-[15px] text-indigo-dark placeholder-[#6B5B50] outline-none focus:ring-2 focus:ring-indigo/20 focus:border-indigo transition-colors bg-white"
             />
           </div>
 
           {/* Course */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-[#5C5A80]">
+            <label className="text-sm font-semibold text-[#6B5B50]">
               Course
             </label>
             <div className="relative">
               <select
                 value={selectedCourseId}
                 onChange={(e) => setSelectedCourseId(e.target.value)}
-                className="w-full h-11 px-4 pr-10 border border-cream-muted rounded-[10px] text-[15px] text-[#5C5A80] outline-none focus:ring-2 focus:ring-indigo/20 focus:border-indigo transition-colors bg-white appearance-none cursor-pointer"
+                className="w-full h-11 px-4 pr-10 border border-cream-muted rounded-[10px] text-[15px] text-[#6B5B50] outline-none focus:ring-2 focus:ring-indigo/20 focus:border-indigo transition-colors bg-white appearance-none cursor-pointer"
               >
                 <option value="">No Course</option>
                 {courses.map((course) => (
@@ -96,13 +96,13 @@ export default function StartSessionModal({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C5A80] pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B50] pointer-events-none" />
             </div>
           </div>
 
           {/* Study Materials */}
           <div className="flex flex-col gap-2.5">
-            <label className="text-sm font-semibold text-[#5C5A80]">
+            <label className="text-sm font-semibold text-[#6B5B50]">
               Study Materials
             </label>
 
@@ -179,13 +179,13 @@ export default function StartSessionModal({
         <div className="flex items-center justify-between pt-2">
           <button
             onClick={onClose}
-            className="text-[15px] font-semibold text-[#5C5A80] hover:text-indigo-dark transition-colors cursor-pointer px-1"
+            className="text-[15px] font-semibold text-[#6B5B50] hover:text-indigo-dark transition-colors cursor-pointer px-1"
           >
             Cancel
           </button>
           <button
             onClick={handleStart}
-            className="flex items-center gap-2 bg-indigo hover:bg-indigo-dark text-white font-semibold text-[15px] px-6 py-3 rounded-full transition-colors cursor-pointer shadow-[0_4px_12px_rgba(79,70,229,0.15)]"
+            className="flex items-center gap-2 bg-indigo hover:bg-indigo-dark text-white font-semibold text-[15px] px-6 py-3 rounded-full transition-colors cursor-pointer shadow-[0_4px_12px_rgba(192,106,69,0.15)]"
           >
             Start Study Session
           </button>

@@ -21,7 +21,7 @@ function AppRoutes() {
 
   const effectivePage = useMemo(() => {
     if (debugBypass) return page
-    if (user && (page === 'home' || page === 'login' || page === 'signup' || page === 'forgot-password'))
+    if (user && (page === 'login' || page === 'signup' || page === 'forgot-password'))
       return 'dashboard' as const
     if (!user && (page === 'dashboard' || page === 'session' || page === 'course'))
       return 'login' as const
@@ -76,15 +76,17 @@ function AppRoutes() {
             await logout()
             setPage('home')
           }}
+          onHome={() => setPage('home')}
         />
       )
     case 'session':
-      return <StudySession sessionId={activeSessionId} onExit={() => setPage('dashboard')} />
+      return <StudySession sessionId={activeSessionId} onExit={() => setPage('dashboard')} onHome={() => setPage('home')} />
     case 'course':
       return (
         <CoursePage
           courseId={selectedCourseId!}
           onBack={() => setPage('dashboard')}
+          onHome={() => setPage('home')}
           onStartSession={(sessionId) => {
             setActiveSessionId(sessionId)
             setPage('session')
@@ -95,6 +97,7 @@ function AppRoutes() {
       return (
         <HomePage
           onStart={() => setPage('login')}
+          onStudySessions={() => setPage('dashboard')}
           onDebugSession={isDev ? () => { setDebugBypass(true); setPage('session') } : undefined}
         />
       )

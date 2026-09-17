@@ -27,19 +27,19 @@ export interface CourseColorSet {
 }
 
 export const COLOR_MAP: Record<string, CourseColorSet> = {
-  '#E11D48': { bg: 'bg-[#FFF1F2]', border: 'border-[#FFE4E6]', text: 'text-[#E11D48]', iconBg: 'bg-white/70' },
-  '#EA580C': { bg: 'bg-[#FFF7ED]', border: 'border-[#FFEDD5]', text: 'text-[#EA580C]', iconBg: 'bg-white/70' },
-  '#A16207': { bg: 'bg-[#FEFCE8]', border: 'border-[#FEF9C3]', text: 'text-[#A16207]', iconBg: 'bg-white/70' },
-  '#15803D': { bg: 'bg-[#F0FDF4]', border: 'border-[#DCFCE7]', text: 'text-[#15803D]', iconBg: 'bg-white/70' },
-  '#0369A1': { bg: 'bg-[#F0F9FF]', border: 'border-[#E0F2FE]', text: 'text-[#0369A1]', iconBg: 'bg-white/70' },
-  '#6D28D9': { bg: 'bg-[#FAF5FF]', border: 'border-[#F3E8FF]', text: 'text-[#6D28D9]', iconBg: 'bg-white/70' },
-  '#9CA3AF': { bg: 'bg-[#F9FAFB]', border: 'border-[#F3F4F6]', text: 'text-[#6B7280]', iconBg: 'bg-white/70' },
+  '#C24B32': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#C24B32]', iconBg: 'bg-white/70' },
+  '#C06A45': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#C06A45]', iconBg: 'bg-white/70' },
+  '#A67C52': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#A67C52]', iconBg: 'bg-white/70' },
+  '#6B8C5A': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#6B8C5A]', iconBg: 'bg-white/70' },
+  '#7A6352': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#7A6352]', iconBg: 'bg-white/70' },
+  '#8B6B61': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#8B6B61]', iconBg: 'bg-white/70' },
+  '#9C8B7E': { bg: 'bg-[#ECF0EB]', border: 'border-[#CDD6CC]', text: 'text-[#7A7067]', iconBg: 'bg-white/70' },
 }
 
 const DEFAULT_COLORS: CourseColorSet = {
-  bg: 'bg-[#F9FAFB]',
-  border: 'border-[#F3F4F6]',
-  text: 'text-[#6B7280]',
+  bg: 'bg-[#ECF0EB]',
+  border: 'border-[#CDD6CC]',
+  text: 'text-[#7A7067]',
   iconBg: 'bg-white/70',
 }
 

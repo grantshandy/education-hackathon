@@ -25,10 +25,12 @@ export default function CoursePage({
   courseId,
   onBack,
   onStartSession,
+  onHome,
 }: {
   courseId: string
   onBack: () => void
   onStartSession: (sessionId: string) => void
+  onHome?: () => void
 }) {
   const { getIdToken } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
@@ -107,7 +109,7 @@ export default function CoursePage({
   if (loading || !course) {
     return (
       <div className="min-h-screen bg-cream-100 flex items-center justify-center font-instrument">
-        <div className="text-[#5C5A80]">{loading ? 'Loading...' : 'Course not found'}</div>
+        <div className="text-[#6B5B50]">{loading ? 'Loading...' : 'Course not found'}</div>
       </div>
     )
   }
@@ -138,20 +140,26 @@ export default function CoursePage({
     <div className="min-h-screen bg-cream-100 flex flex-col font-instrument">
       {/* Nav */}
       <nav className="h-20 px-[120px] flex items-center justify-between border-b border-cream-border-dark bg-white shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={onHome}>
           <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
             <GraduationCap className="w-[18px] h-[18px] text-white" />
           </div>
           <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span onClick={onBack} className="text-[15px] font-medium text-indigo-dark cursor-pointer">
+          <span onClick={onHome} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Home
           </span>
-          <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors">
+          <span onClick={onBack} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Dashboard
+          </span>
+          <span onClick={onBack} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Study Sessions
+          </span>
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
         </div>
       </nav>
 
@@ -184,20 +192,20 @@ export default function CoursePage({
                   <Check className="w-4 h-4" />
                 </button>
                 <button onClick={() => setEditingName(false)} className="w-8 h-8 rounded-full bg-cream-border-dark flex items-center justify-center cursor-pointer">
-                  <X className="w-4 h-4 text-[#5C5A80]" />
+                  <X className="w-4 h-4 text-[#6B5B50]" />
                 </button>
               </div>
             ) : (
               <h1 className="font-bold text-[28px] text-indigo-dark">{course.name}</h1>
             )}
-            <p className="text-sm text-[#5C5A80]">
+            <p className="text-sm text-[#6B5B50]">
               {completedSessions.length} study session{completedSessions.length !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setEditName(course.name); setEditingName(true) }}
-              className="flex items-center gap-2 px-5 py-2.5 border border-cream-border-dark rounded-lg text-sm font-medium text-indigo-dark hover:bg-cream-100 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-cream-100 border border-cream-border-dark rounded-lg text-sm font-medium text-indigo-dark hover:bg-cream-200 transition-colors cursor-pointer"
             >
               <Pencil className="w-3.5 h-3.5" />
               Edit Course
@@ -215,26 +223,26 @@ export default function CoursePage({
         {/* Stat cards */}
         <div className="flex gap-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex-1 flex items-center gap-4 px-6 py-5 bg-white border border-cream-border-dark rounded-2xl">
+            <div key={stat.label} className="flex-1 flex items-center gap-4 px-6 py-5 bg-card border border-card-border rounded-2xl">
               <div className="w-12 h-12 rounded-full bg-indigo-bg flex items-center justify-center shrink-0">
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
               <div>
                 <span className="font-bold text-2xl text-indigo-dark block">{stat.value}</span>
-                <span className="text-sm text-[#5C5A80]">{stat.label}</span>
+                <span className="text-sm text-[#6B5B50]">{stat.label}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Study Sessions */}
-        <section className="flex flex-col gap-4 bg-white border border-cream-border-dark rounded-2xl p-6">
+        <section className="flex flex-col gap-4 bg-card border border-card-border rounded-2xl p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-xl text-indigo-dark">Study Sessions</h2>
             <div className="relative">
               <button
                 onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-cream-border-dark rounded-lg text-sm text-[#5C5A80] hover:bg-cream-100 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-cream-100 border border-cream-border-dark rounded-lg text-sm text-[#6B5B50] hover:bg-cream-200 transition-colors cursor-pointer"
               >
                 {sortLabels[sortMode]}
                 <ChevronDown className="w-3.5 h-3.5" />
@@ -245,7 +253,7 @@ export default function CoursePage({
                     <button
                       key={key}
                       onClick={() => { setSortMode(key); setShowSortDropdown(false) }}
-                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-cream-100 transition-colors cursor-pointer ${sortMode === key ? 'text-indigo font-semibold' : 'text-[#5C5A80]'}`}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-cream-100 transition-colors cursor-pointer ${sortMode === key ? 'text-indigo font-semibold' : 'text-[#6B5B50]'}`}
                     >
                       {label}
                     </button>
@@ -256,7 +264,7 @@ export default function CoursePage({
           </div>
 
           {sortedSessions.length === 0 ? (
-            <div className="py-8 text-center text-[#5C5A80] text-sm">
+            <div className="py-8 text-center text-[#6B5B50] text-sm">
               No sessions yet. Start a study session to see your history here.
             </div>
           ) : (
@@ -273,25 +281,25 @@ export default function CoursePage({
                     </div>
                     <div className="flex-1">
                       <span className="font-semibold text-[15px] text-indigo-dark block">{session.title}</span>
-                      <span className="text-sm text-[#5C5A80]">
+                      <span className="text-sm text-[#6B5B50]">
                         {session.messageCount} message{session.messageCount !== 1 ? 's' : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-[#9A98B0]" />
-                        <span className="text-sm text-[#5C5A80]">{session.durationMinutes} min</span>
+                        <Clock className="w-3.5 h-3.5 text-[#9C8B7E]" />
+                        <span className="text-sm text-[#6B5B50]">{session.durationMinutes} min</span>
                       </div>
                       <button
                         onClick={() => handleViewSummary(session)}
-                        className="flex items-center gap-1 px-3 py-1.5 border border-cream-border-dark rounded-lg text-sm font-medium text-[#5C5A80] hover:text-indigo-dark hover:border-indigo/30 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-cream-100 border border-cream-border-dark rounded-lg text-sm font-medium text-[#6B5B50] hover:text-indigo-dark hover:bg-cream-200 transition-colors cursor-pointer"
                       >
                         View Summary
                         <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteSession(session.sessionId)}
-                        className="p-1.5 rounded-lg text-[#9A98B0] hover:text-[#E11D48] hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-[#9C8B7E] hover:text-[#C24B32] hover:bg-[#FFF0EB] transition-colors cursor-pointer"
                         title="Delete session"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -305,12 +313,12 @@ export default function CoursePage({
         </section>
 
         {/* Course Materials */}
-        <section className="flex flex-col gap-4 bg-white border border-cream-border-dark rounded-2xl p-6">
+        <section className="flex flex-col gap-4 bg-card border border-card-border rounded-2xl p-6">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-xl text-indigo-dark">Course Materials</h2>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-cream-border-dark rounded-lg text-sm font-medium text-[#5C5A80] hover:text-indigo-dark transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-cream-100 border border-cream-border-dark rounded-lg text-sm font-medium text-[#6B5B50] hover:text-indigo-dark hover:bg-cream-200 transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               Add Material
@@ -327,7 +335,7 @@ export default function CoursePage({
             />
           </div>
           {materials.length === 0 ? (
-            <div className="py-8 text-center text-[#5C5A80] text-sm">
+            <div className="py-8 text-center text-[#6B5B50] text-sm">
               No materials yet. Click "Add Material" to upload files.
             </div>
           ) : (
@@ -338,12 +346,12 @@ export default function CoursePage({
                     <FileText className={`w-4 h-4 ${c.text}`} />
                   </div>
                   <span className="flex-1 text-sm font-medium text-indigo-dark">{file.name}</span>
-                  <span className="text-sm text-[#9A98B0]">
+                  <span className="text-sm text-[#9C8B7E]">
                     {(file.size / 1024 / 1024).toFixed(1)} MB
                   </span>
                   <button
                     onClick={() => setMaterials((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="p-1 text-[#9A98B0] hover:text-[#E11D48] transition-colors cursor-pointer"
+                    className="p-1 text-[#9C8B7E] hover:text-[#C24B32] transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -379,13 +387,13 @@ function SessionSummaryModal({ session, onClose }: { session: Session; onClose: 
         <div className="flex items-center justify-between px-8 pt-8 pb-4">
           <div>
             <h2 className="font-bold text-2xl text-indigo-dark">{session.title}</h2>
-            <p className="text-sm text-[#5C5A80] mt-1">
+            <p className="text-sm text-[#6B5B50] mt-1">
               {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               {' '}&middot; {session.durationMinutes} min &middot; {session.messageCount} messages
             </p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-cream-border-dark/50 flex items-center justify-center hover:bg-cream-border-dark transition-colors cursor-pointer">
-            <X className="w-3.5 h-3.5 text-[#5C5A80]" />
+            <X className="w-3.5 h-3.5 text-[#6B5B50]" />
           </button>
         </div>
 
@@ -401,7 +409,7 @@ function SessionSummaryModal({ session, onClose }: { session: Session; onClose: 
           {/* Chat History */}
           {transcript.length > 0 ? (
             <div className="flex flex-col gap-2">
-              <span className="font-bold text-sm text-[#5C5A80]">Chat History</span>
+              <span className="font-bold text-sm text-[#6B5B50]">Chat History</span>
               <div className="flex flex-col gap-3">
                 {transcript.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -417,7 +425,7 @@ function SessionSummaryModal({ session, onClose }: { session: Session; onClose: 
               </div>
             </div>
           ) : !session.summary ? (
-            <div className="py-12 text-center text-[#5C5A80] text-sm">
+            <div className="py-12 text-center text-[#6B5B50] text-sm">
               No summary or chat history available for this session.
             </div>
           ) : null}

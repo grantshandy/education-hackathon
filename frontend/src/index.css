@@ -5,20 +5,23 @@
   --font-instrument: "Instrument Sans", system-ui, sans-serif;
   --font-geist: "Geist", system-ui, sans-serif;
 
-  --color-cream-50: #FCFAF7;
-  --color-cream-100: #FAF9F6;
-  --color-cream-200: #F0EDF6;
-  --color-cream-border: #EAE6E1;
-  --color-cream-border-dark: #E2DFD7;
-  --color-cream-muted: #DEDBD4;
-  --color-cream-dash-border: #CDCAC2;
+  --color-cream-50: #FDF8F3;
+  --color-cream-100: #FAF5EE;
+  --color-cream-200: #F2EBE0;
+  --color-cream-border: #E8DFD3;
+  --color-cream-border-dark: #DDD3C5;
+  --color-cream-muted: #D4C9BA;
+  --color-cream-dash-border: #C7BAA8;
 
-  --color-ink: #2E2E3A;
-  --color-ink-secondary: #5C5C70;
-  --color-ink-muted: #8E8E9F;
+  --color-card: #ECF0EB;
+  --color-card-border: #CDD6CC;
 
-  --color-indigo: #4F46E5;
-  --color-indigo-light: #818CF8;
-  --color-indigo-bg: #EEF2FF;
-  --color-indigo-dark: #1E1B4B;
+  --color-ink: #3B2F2A;
+  --color-ink-secondary: #6B5B50;
+  --color-ink-muted: #9C8B7E;
+
+  --color-indigo: #C06A45;
+  --color-indigo-light: #D4896A;
+  --color-indigo-bg: #FDF0E8;
+  --color-indigo-dark: #4A2C1A;
 }

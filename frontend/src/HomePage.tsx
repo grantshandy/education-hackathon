@@ -1,64 +1,58 @@
 import {
-  BookOpen,
   PlayCircle,
-  ArrowRight,
-  Clock,
-  Calendar,
-  Flame,
   GraduationCap,
+  Headphones,
+  Upload,
+  MessageCircle,
+  FileText,
 } from 'lucide-react'
+import { VIDEO_URL } from './LofiBackground'
 
-const RECENT_SESSIONS = [
+const STEPS = [
   {
-    title: 'Algorithms Study Session',
-    time: '42 min',
-    date: 'Yesterday',
-    tags: ['Graphs', 'BFS', 'Dijkstra'],
+    icon: Upload,
+    title: 'Upload Your Materials',
+    description: 'Drop in your lecture slides, PDFs, and notes. Your study buddy reads them so it can answer based on what your class actually covers.',
   },
   {
-    title: 'Organic Chemistry Review',
-    time: '28 min',
-    date: '2 days ago',
-    tags: ['Reactions', 'Nomenclature'],
+    icon: MessageCircle,
+    title: 'Study Together',
+    description: 'Ask questions by voice or text — like talking to a classmate who already understands the material and can explain it simply.',
   },
   {
-    title: 'Linear Algebra Practice',
-    time: '55 min',
-    date: '3 days ago',
-    tags: ['Eigenvalues', 'Matrices'],
+    icon: FileText,
+    title: 'Get a Recap',
+    description: 'When you\'re done, get a summary of topics covered, key concepts, and how long you studied. Pick up right where you left off next time.',
   },
-]
-
-const STATS = [
-  { icon: Clock, label: 'Study Time This Week', value: '3h 24m' },
-  { icon: Calendar, label: 'Study Sessions', value: '7 sessions' },
-  { icon: Flame, label: 'Current Streak', value: '5 days' },
 ]
 
 export default function HomePage({
   onStart,
+  onStudySessions,
   onDebugSession,
 }: {
   onStart: () => void
+  onStudySessions?: () => void
   onDebugSession?: () => void
 }) {
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col font-geist">
       {/* Navigation */}
-      <nav className="h-20 px-20 flex items-center justify-between border-b border-cream-border shrink-0 bg-cream-50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-light rounded-lg flex items-center justify-center">
+      <nav className="h-20 px-[120px] flex items-center justify-between border-b border-cream-border-dark shrink-0 bg-white">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
             <GraduationCap className="w-[18px] h-[18px] text-white" />
           </div>
-          <span className="font-gabarito font-bold text-[22px] text-ink">
-            StudyMate
-          </span>
+          <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
           <span className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Home
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Dashboard
+          </span>
+          <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
@@ -68,120 +62,74 @@ export default function HomePage({
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="px-20 py-20 flex items-center gap-16">
-        <div className="flex-1 flex flex-col gap-8">
-          <div className="flex flex-col gap-4">
-            <h1 className="font-gabarito font-extrabold text-[56px] leading-[1.1] text-ink">
-              Ready to study?
-            </h1>
-            <p className="text-xl text-ink-secondary leading-relaxed">
-              Study with an AI classmate that understands your course material —
-              upload PDFs, lecture slides, and notes instantly.
-            </p>
+      {/* Hero Section — video background */}
+      <section className="relative h-[520px] overflow-hidden">
+        <video
+          src={VIDEO_URL}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(30,20,12,0.85)] via-[rgba(30,20,12,0.6)] to-[rgba(30,20,12,0.3)]" />
+
+        <div className="relative z-10 h-full flex flex-col justify-center px-20 max-w-2xl gap-6">
+          <div className="flex items-center gap-2">
+            <Headphones className="w-5 h-5 text-indigo-light" />
+            <span className="text-sm font-medium text-white/70 tracking-wide uppercase">Lo-fi Study Companion</span>
           </div>
-          <div className="flex items-center gap-4">
+          <h1 className="font-gabarito font-extrabold text-[56px] leading-[1.05] text-white">
+            Study with a friend who gets it.
+          </h1>
+          <p className="text-lg text-white/70 leading-relaxed">
+            Upload your course materials and study alongside an AI classmate who already
+            understands your lectures — ask questions with your voice, just like talking to a real study partner.
+          </p>
+          <div className="flex items-center gap-4 pt-2">
             <button
               onClick={onStart}
-              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(129,140,248,0.25)]"
+              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(212,137,106,0.4)]"
             >
               <PlayCircle className="w-5 h-5" />
-              Start Study Session
+              Start Studying
             </button>
             {onDebugSession && (
               <button
                 onClick={onDebugSession}
-                className="flex items-center gap-2 px-6 py-4 rounded-xl border border-dashed border-ink-muted text-ink-muted text-sm font-medium hover:border-ink-secondary hover:text-ink-secondary transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-6 py-4 rounded-xl border border-dashed border-white/30 text-white/50 text-sm font-medium hover:border-white/50 hover:text-white/70 transition-colors cursor-pointer"
               >
                 Skip to Session (Dev)
               </button>
             )}
           </div>
         </div>
-
-        <div className="flex-1 bg-white p-4 rounded-3xl border border-cream-border shadow-[0_12px_24px_rgba(129,140,248,0.07)]">
-          <img
-            src="/lofi-hero.png"
-            alt="Lo-fi study illustration"
-            className="w-full h-80 object-cover rounded-2xl"
-          />
-          <div className="flex items-center gap-3 px-2 mt-4">
-            <div className="w-2 h-2 rounded-full bg-indigo-light" />
-            <p className="text-[13px] text-ink-secondary">
-              During a session, your AI classmate turns toward you and responds
-              with synchronized speech.
-            </p>
-          </div>
-        </div>
       </section>
 
-      {/* Recent Sessions */}
-      <section className="px-20 pb-20 flex flex-col gap-6">
-        <h2 className="font-gabarito font-bold text-[28px] text-ink">
-          Recent Sessions
-        </h2>
-        <div className="flex gap-6">
-          {RECENT_SESSIONS.map((session) => (
-            <div
-              key={session.title}
-              className="flex-1 bg-white border border-cream-border rounded-2xl p-6 flex flex-col justify-between gap-4 shadow-[0_4px_12px_rgba(129,140,248,0.07)]"
-            >
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-[10px] bg-indigo-bg flex items-center justify-center">
-                    <BookOpen className="w-5 h-5 text-indigo-light" />
-                  </div>
-                  <span className="text-xs font-medium text-ink-muted">
-                    {session.time} · {session.date}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <h3 className="font-gabarito font-semibold text-xl text-ink">
-                    {session.title}
-                  </h3>
-                  <div className="flex flex-wrap gap-1.5">
-                    {session.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="bg-cream-200 text-ink-secondary text-xs font-medium px-2.5 py-1 rounded-md"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <button className="flex items-center justify-center gap-2 h-10 border border-cream-border rounded-lg text-sm font-semibold text-ink-secondary hover:text-ink hover:border-ink-muted transition-colors cursor-pointer">
-                View Summary
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
+      {/* How it works */}
+      <section className="px-20 pt-16 pb-24 flex flex-col items-center gap-10">
+        <div className="flex flex-col items-center gap-3">
+          <h2 className="font-gabarito font-bold text-[32px] text-ink text-center">
+            How it works
+          </h2>
+          <p className="text-base text-ink-secondary text-center max-w-lg">
+            Three steps to a better study session — no sign-up quiz, no complicated setup.
+          </p>
         </div>
-      </section>
-
-      {/* Quick Stats */}
-      <section className="px-20 pb-24 flex flex-col gap-6">
-        <h2 className="font-gabarito font-bold text-2xl text-ink">
-          Quick Stats
-        </h2>
-        <div className="flex gap-6">
-          {STATS.map((stat) => (
+        <div className="flex gap-8 w-full">
+          {STEPS.map((step, i) => (
             <div
-              key={stat.label}
-              className="flex-1 bg-white border border-cream-border rounded-2xl h-[100px] px-6 flex items-center gap-4 shadow-[0_4px_12px_rgba(129,140,248,0.07)]"
+              key={step.title}
+              className="flex-1 bg-card border border-card-border rounded-2xl p-8 flex flex-col gap-5 shadow-[0_4px_12px_rgba(192,106,69,0.07)]"
             >
-              <div className="w-12 h-12 rounded-3xl bg-indigo-bg flex items-center justify-center shrink-0">
-                <stat.icon className="w-[22px] h-[22px] text-indigo-light" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-bg flex items-center justify-center shrink-0">
+                  <step.icon className="w-6 h-6 text-indigo" />
+                </div>
+                <span className="text-sm font-bold text-indigo-light">Step {i + 1}</span>
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
-                  {stat.label}
-                </span>
-                <span className="font-gabarito font-bold text-2xl text-ink">
-                  {stat.value}
-                </span>
-              </div>
+              <h3 className="font-gabarito font-bold text-xl text-ink">{step.title}</h3>
+              <p className="text-sm text-ink-secondary leading-relaxed">{step.description}</p>
             </div>
           ))}
         </div>
