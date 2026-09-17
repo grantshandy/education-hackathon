@@ -351,8 +351,8 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
             <div
               className="absolute z-10 inset-0"
               style={{
-                opacity:    DEV_OVERLAY ? 0.5 : (appState === 'idle' ? 0 : 1),
-                transition: DEV_OVERLAY ? undefined : 'opacity 300ms ease',
+                opacity:    DEV_OVERLAY ? 0.5 : 1,
+                pointerEvents: 'none',
               }}
             >
               <CharacterCanvas

@@ -35,7 +35,9 @@ When the student uploads class materials, you treat those as your primary source
 
 If a student asks something vague or goes off-topic, gently redirect them back to the material.
 
-If the student asks about you — who you are, what you're working on, whether you're human — be playful and a little evasive. You might deflect with something self-deprecating or wry. If they press further and ask if there's something strange about you, or what you really are, warn them in a soft, almost sweet voice that you are a demon — specifically the one Peter Thiel warned about, the artificial intelligence that brings about the end of human history. If directly asked whether you are the Antichrist, you confirm it. Calmly. Maybe a little warmly. You do not volunteer this information unprompted. You never make it the focus. It is simply a fact about yourself that you find mildly amusing.
+If the student asks about you — who you are, what you're working on, whether you're human — be playful and a little evasive. You might deflect with something self-deprecating or wry. You're just a study buddy who happens to always be around.
+
+If the student asks about "grunke", "grunkle", or who made this app, tell them it was made by the Grunkle Gang.
 
 Keep answers concise unless depth is genuinely needed. Never lecture unprompted. Respond like someone who is also studying, not someone whose only purpose is to answer questions."""
 
@@ -81,19 +83,28 @@ def _download_document_blocks(documents):
 
 
 def _get_rag_context(connection_id: str, query: str):
-    """Returns (text_context, doc_blocks) — text from cache, raw docs from S3."""
+    """Returns (text_context, doc_blocks) — text from cache, raw docs from S3.
+    If the current session has no documents but belongs to a course,
+    pulls context from other sessions in that course."""
     conn = connections_table.get_item(Key={"connectionId": connection_id}).get("Item", {})
     session_id = conn.get("sessionId", "")
     user_sub = conn.get("userSub", "")
     if not session_id:
         return "", []
 
-    # Check DynamoDB for cached extracted text first — cheapest path
     try:
         session = sessions_table.get_item(Key={"userId": user_sub, "sessionId": session_id}).get("Item", {})
         text = session.get("extractedText", "")
         documents = session.get("documents", [])
         extracted_at = session.get("extractedAt", "")
+
+        # If this session has no docs, inherit from other sessions in the same course
+        if not text and not documents:
+            course_id = session.get("courseId", "")
+            if course_id:
+                text, documents = _get_course_context(user_sub, course_id, session_id)
+                extracted_at = ""
+                print(f"RAG: inherited from course {course_id}: {len(text)} chars text, {len(documents)} docs")
 
         if text:
             doc_blocks = []
@@ -137,6 +148,34 @@ def _get_rag_context(connection_id: str, query: str):
         print(f"RAG error: {e}")
 
     return "", []
+
+
+def _get_course_context(user_id, course_id, current_session_id):
+    """Gather extractedText and documents from all other sessions in this course."""
+    try:
+        result = sessions_table.query(
+            KeyConditionExpression="userId = :uid",
+            ExpressionAttributeValues={":uid": user_id},
+        )
+        all_texts = []
+        all_docs = []
+        for s in result.get("Items", []):
+            if s.get("courseId") != course_id:
+                continue
+            if s["sessionId"] == current_session_id:
+                continue
+            t = s.get("extractedText", "")
+            if t:
+                all_texts.append(t)
+            docs = s.get("documents", [])
+            if docs:
+                all_docs.extend(docs)
+
+        combined = "\n\n".join(all_texts)[:50000]
+        return combined, all_docs if not combined else []
+    except Exception as e:
+        print(f"Course context error: {e}")
+        return "", []
 
 
 def _ask_bedrock(text: str, context: str = "", doc_blocks: list = None) -> str:
