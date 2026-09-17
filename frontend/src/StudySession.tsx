@@ -15,6 +15,9 @@ import {
   Square,
   ExternalLink,
   Minus,
+  Play,
+  Pause,
+  Music,
 } from 'lucide-react'
 
 const REST_IMAGE      = '/studying.png'
@@ -34,6 +37,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [paused, setPaused] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const musicRef = useRef<HTMLAudioElement>(null)
   const fadeRef = useRef<number | null>(null)
@@ -88,6 +92,18 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     setMuted(audio.muted)
   }
 
+  function togglePause() {
+    const audio = musicRef.current
+    if (!audio) return
+    if (audio.paused) {
+      audio.play().catch(() => {})
+      setPaused(false)
+    } else {
+      audio.pause()
+      setPaused(true)
+    }
+  }
+
   const statusLabel = !connected
     ? 'Connecting…'
     : appState === 'thinking'
@@ -107,28 +123,24 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
       <audio ref={musicRef} src={MUSIC_URL} loop hidden />
 
       {/* Nav */}
-      <nav className="h-16 px-8 flex items-center justify-between border-b border-cream-border bg-white shrink-0">
-        <div className="flex items-center gap-2">
+      <nav className="h-20 px-[120px] flex items-center justify-between border-b border-cream-border-dark bg-white shrink-0">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={onHome}>
           <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
             <GraduationCap className="w-[18px] h-[18px] text-white" />
           </div>
-          <span className="font-bold text-lg text-indigo-dark">StudyMate</span>
+          <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span onClick={onHome} className="text-[15px] font-medium text-indigo-dark cursor-pointer">
+          <span onClick={onHome} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Home
           </span>
-          <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer">
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Study Sessions
+          </span>
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <button
-            onClick={toggleMute}
-            className="text-[#5C5A80] hover:text-indigo-dark transition-colors text-lg"
-            title={muted ? 'Unmute music' : 'Mute music'}
-          >
-            {muted ? '🔇' : '🎵'}
-          </button>
-          <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
         </div>
       </nav>
 
@@ -139,15 +151,15 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
             Study Session
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
-            <div className="w-2 h-2 rounded-full bg-[#E11D48]" />
-            <span className="text-sm text-[#5C5A80]">
+            <div className="w-2 h-2 rounded-full bg-[#C24B32]" />
+            <span className="text-sm text-[#6B5B50]">
               Started {startTime}
             </span>
           </div>
         </div>
         <button
           onClick={() => setShowPostStudy(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#E11D48] text-[#E11D48] text-sm font-semibold hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-[#C24B32] text-[#C24B32] text-sm font-semibold hover:bg-[#FFF0EB] transition-colors cursor-pointer"
         >
           <Square className="w-3 h-3 fill-current" />
           End Session
@@ -206,7 +218,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
               <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
                 <Video className="w-5 h-5" />
               </button>
-              <button className="w-16 h-16 rounded-full bg-indigo-light hover:bg-indigo flex items-center justify-center text-white transition-colors cursor-pointer shadow-[0_4px_20px_rgba(129,140,248,0.4)]">
+              <button className="w-16 h-16 rounded-full bg-indigo-light hover:bg-indigo flex items-center justify-center text-white transition-colors cursor-pointer shadow-[0_4px_20px_rgba(212,137,106,0.4)]">
                 <Mic className="w-6 h-6" />
               </button>
               <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
@@ -220,6 +232,23 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
         {/* Right — chat panel */}
         <div className="flex-[45] flex flex-col min-w-0 min-h-0">
+          {/* Music bar */}
+          <div className="shrink-0 flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-indigo-bg flex items-center justify-center shrink-0">
+              <Music className="w-4 h-4 text-indigo" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold text-indigo-dark block truncate">Lo-fi Study Beats</span>
+              <span className="text-[11px] text-[#6B5B50]">{paused ? 'Paused' : 'Now Playing'}</span>
+            </div>
+            <button
+              onClick={togglePause}
+              className="w-9 h-9 rounded-full bg-indigo hover:bg-indigo-dark flex items-center justify-center text-white transition-colors cursor-pointer shrink-0"
+              title={paused ? 'Play' : 'Pause'}
+            >
+              {paused ? <Play className="w-4 h-4 ml-0.5" /> : <Pause className="w-4 h-4" />}
+            </button>
+          </div>
           {/* Messages */}
           <div className="flex-1 overflow-y-auto flex flex-col gap-5 pr-1">
             {transcript.length === 0 ? (
@@ -273,7 +302,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
           {/* Input */}
           <div className="pt-4 shrink-0">
-            <div className="flex items-center gap-3 bg-white border border-cream-border rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3">
               <button className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0">
                 <Paperclip className="w-5 h-5" />
               </button>

@@ -78,19 +78,22 @@ export default function DashboardPage({
           <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span className="text-[15px] font-medium text-indigo-dark cursor-pointer" onClick={onHome}>
+          <span className="text-[15px] font-semibold text-indigo-light cursor-pointer" onClick={onHome}>
             Home
           </span>
-          <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors">
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+            Study Sessions
+          </span>
+          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
           <button
             onClick={onLogout}
-            className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors"
+            className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors"
           >
             Sign out
           </button>
-          <div className="w-9 h-9 rounded-full bg-cream-border-dark" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
         </div>
       </nav>
 
@@ -103,7 +106,7 @@ export default function DashboardPage({
           </h1>
           <button
             onClick={() => setShowStartModal(true)}
-            className="flex items-center gap-2.5 bg-indigo hover:bg-indigo-dark px-8 py-[18px] rounded-full text-white font-semibold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(79,70,229,0.2)]"
+            className="flex items-center gap-2.5 bg-indigo hover:bg-indigo-dark px-8 py-[18px] rounded-full text-white font-semibold text-base transition-colors cursor-pointer shadow-[0_8px_24px_rgba(192,106,69,0.2)]"
           >
             <PlayCircle className="w-5 h-5" />
             Start Study Session
@@ -116,7 +119,7 @@ export default function DashboardPage({
             Your Courses
           </h2>
           {loadingData ? (
-            <div className="text-[#5C5A80] text-sm">Loading courses...</div>
+            <div className="text-[#6B5B50] text-sm">Loading courses...</div>
           ) : (
             <div className="flex gap-4 flex-wrap">
               {courses.map((course) => {
@@ -152,9 +155,9 @@ export default function DashboardPage({
                 className="flex-1 min-w-[180px] max-w-[240px] h-[180px] p-6 rounded-[20px] border border-dashed border-cream-dash-border flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-ink-muted transition-colors"
               >
                 <div className="w-10 h-10 rounded-[20px] border border-cream-dash-border flex items-center justify-center">
-                  <Plus className="w-4 h-4 text-[#5C5A80]" />
+                  <Plus className="w-4 h-4 text-[#6B5B50]" />
                 </div>
-                <span className="text-sm font-semibold text-[#5C5A80]">
+                <span className="text-sm font-semibold text-[#6B5B50]">
                   Add Course
                 </span>
               </div>

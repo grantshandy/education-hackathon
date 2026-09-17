@@ -45,14 +45,12 @@ export default function HomePage({
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col font-geist">
       {/* Navigation */}
-      <nav className="h-20 px-20 flex items-center justify-between border-b border-cream-border shrink-0 bg-cream-50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-indigo-light rounded-lg flex items-center justify-center">
+      <nav className="h-20 px-[120px] flex items-center justify-between border-b border-cream-border-dark shrink-0 bg-white">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
             <GraduationCap className="w-[18px] h-[18px] text-white" />
           </div>
-          <span className="font-gabarito font-bold text-[22px] text-ink">
-            StudyMate
-          </span>
+          <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
           <span className="text-[15px] font-semibold text-indigo-light cursor-pointer">
@@ -83,7 +81,7 @@ export default function HomePage({
           <div className="flex items-center gap-4">
             <button
               onClick={onStart}
-              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(129,140,248,0.25)]"
+              className="flex items-center gap-2.5 bg-indigo-light hover:bg-indigo px-8 py-4 rounded-xl w-fit text-white font-bold text-base transition-colors cursor-pointer shadow-[0_8px_16px_rgba(192,106,69,0.25)]"
             >
               <PlayCircle className="w-5 h-5" />
               Start Study Session
@@ -99,7 +97,7 @@ export default function HomePage({
           </div>
         </div>
 
-        <div className="flex-1 bg-white p-4 rounded-3xl border border-cream-border shadow-[0_12px_24px_rgba(129,140,248,0.07)]">
+        <div className="flex-1 bg-card p-4 rounded-3xl border border-card-border shadow-[0_12px_24px_rgba(192,106,69,0.07)]">
           <img
             src="/lofi-hero.png"
             alt="Lo-fi study illustration"
@@ -124,7 +122,7 @@ export default function HomePage({
           {RECENT_SESSIONS.map((session) => (
             <div
               key={session.title}
-              className="flex-1 bg-white border border-cream-border rounded-2xl p-6 flex flex-col justify-between gap-4 shadow-[0_4px_12px_rgba(129,140,248,0.07)]"
+              className="flex-1 bg-card border border-card-border rounded-2xl p-6 flex flex-col justify-between gap-4 shadow-[0_4px_12px_rgba(192,106,69,0.07)]"
             >
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
@@ -151,7 +149,7 @@ export default function HomePage({
                   </div>
                 </div>
               </div>
-              <button className="flex items-center justify-center gap-2 h-10 border border-cream-border rounded-lg text-sm font-semibold text-ink-secondary hover:text-ink hover:border-ink-muted transition-colors cursor-pointer">
+              <button className="flex items-center justify-center gap-2 h-10 bg-cream-100 border border-cream-border rounded-lg text-sm font-semibold text-ink-secondary hover:text-ink hover:border-ink-muted transition-colors cursor-pointer">
                 View Summary
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -169,7 +167,7 @@ export default function HomePage({
           {STATS.map((stat) => (
             <div
               key={stat.label}
-              className="flex-1 bg-white border border-cream-border rounded-2xl h-[100px] px-6 flex items-center gap-4 shadow-[0_4px_12px_rgba(129,140,248,0.07)]"
+              className="flex-1 bg-card border border-card-border rounded-2xl h-[100px] px-6 flex items-center gap-4 shadow-[0_4px_12px_rgba(192,106,69,0.07)]"
             >
               <div className="w-12 h-12 rounded-3xl bg-indigo-bg flex items-center justify-center shrink-0">
                 <stat.icon className="w-[22px] h-[22px] text-indigo-light" />
