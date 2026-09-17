@@ -6,6 +6,7 @@ import {
   MessageCircle,
   FileText,
 } from 'lucide-react'
+import { useAuth } from './AuthContext'
 const VIDEO_URL = '/sprites/lofi-girl-loop.gif'
 
 const STEPS = [
@@ -37,6 +38,7 @@ export default function HomePage({
   onSettings?: () => void
   onDebugSession?: () => void
 }) {
+  const { user } = useAuth()
   return (
     <div className="min-h-screen bg-cream-50 flex flex-col font-geist">
       {/* Navigation */}
@@ -57,7 +59,11 @@ export default function HomePage({
           <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
-          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
+          <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light flex items-center justify-center">
+            <span className="text-sm font-bold text-indigo">
+              {user?.email?.charAt(0).toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
       </nav>
 
