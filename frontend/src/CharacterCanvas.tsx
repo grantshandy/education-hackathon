@@ -164,7 +164,7 @@ export function CharacterCanvas({ viseme, talking, devOverlay }: Props) {
         onEnded={handleTransInEnded}
         className="absolute inset-0 w-full h-full object-cover"
         style={{
-          opacity: devOverlay || charState === 'transitioning_in' || charState === 'talking' ? 1 : 0,
+          opacity: devOverlay || charState === 'transitioning_in' || charState === 'talking' || charState === 'transitioning_out' ? 1 : 0,
           pointerEvents: 'none',
         }}
       />
