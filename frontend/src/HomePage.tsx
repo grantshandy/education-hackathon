@@ -52,9 +52,6 @@ export default function HomePage({
           <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Dashboard
           </span>
-          <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
-            Study Sessions
-          </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>

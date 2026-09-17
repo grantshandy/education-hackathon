@@ -163,14 +163,11 @@ export default function CoursePage({
           <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span onClick={onHome} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
+          <span onClick={onHome} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Home
           </span>
-          <span onClick={onBack} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onBack} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Dashboard
-          </span>
-          <span onClick={onBack} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
-            Study Sessions
           </span>
           <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
