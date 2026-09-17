@@ -269,6 +269,37 @@ Resources:
             Path: /sessions/{sessionId}/summary
             Method: POST
 
+  TranscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/api_transcribe/
+      Handler: handler.lambda_handler
+      Timeout: 60
+      Environment:
+        Variables:
+          AUDIO_BUCKET: !Ref AudioBucket
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref AudioBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:DeleteObject
+              Resource: !Sub "${AudioBucket.Arn}/*"
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: "*"
+      Events:
+        Transcribe:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /transcribe
+            Method: POST
+
   # ── Lambda functions ──────────────────────────────────────────────────────
   ConnectFunction:
     Type: AWS::Serverless::Function
@@ -298,7 +329,7 @@ Resources:
     Properties:
       CodeUri: backend/functions/ws_message/
       Handler: handler.lambda_handler
-      Timeout: 60
+      Timeout: 120
       Environment:
         Variables:
           BEDROCK_MODEL_ID: !Ref BedrockModelId
@@ -313,6 +344,7 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:GetObject
+                - s3:DeleteObject
               Resource: !Sub "${AudioBucket.Arn}/*"
         - Statement:
             - Effect: Allow
@@ -322,6 +354,11 @@ Resources:
             - Effect: Allow
               Action:
                 - polly:SynthesizeSpeech
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
               Resource: "*"
             - Effect: Allow
               Action:

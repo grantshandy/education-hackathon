@@ -3,11 +3,12 @@ import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { api } from './api'
 import { CharacterCanvas } from './CharacterCanvas'
-import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY } from './LofiBackground'
+import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY, DEBUG } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
   Mic,
+  MicOff,
   Video,
   Settings,
   Paperclip,
@@ -34,7 +35,17 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const [debugLog, setDebugLog] = useState<string[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  function dbg(msg: string) {
+    if (!DEBUG) return
+    const ts = new Date().toISOString().slice(11, 23)
+    console.log(`[debug ${ts}]`, msg)
+    setDebugLog((prev) => [...prev.slice(-49), `${ts} ${msg}`])
+  }
   const musicRef = useRef<HTMLAudioElement>(null)
   const fadeRef = useRef<number | null>(null)
   const [sessionStart] = useState(() => new Date())
@@ -46,7 +57,7 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
     const audio = musicRef.current
     if (!audio) return
     audio.volume = MUSIC_VOL_IDLE
-    const tryPlay = () => audio.play().catch(() => {})
+    const tryPlay = () => audio.play().then(() => dbg('music playing')).catch((e) => dbg(`music blocked: ${e}`))
     tryPlay()
     const resume = () => { tryPlay(); document.removeEventListener('click', resume) }
     document.addEventListener('click', resume)
@@ -86,6 +97,62 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
     if (!audio) return
     audio.muted = !audio.muted
     setMuted(audio.muted)
+  }
+
+  async function toggleRecording() {
+    dbg(`toggleRecording called, isRecording=${isRecording}, connected=${connected}`)
+    if (isRecording) {
+      dbg('stopping recorder')
+      mediaRecorderRef.current?.stop()
+      return
+    }
+
+    dbg('requesting getUserMedia')
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      dbg('getUserMedia granted')
+    } catch (e) {
+      dbg(`getUserMedia error: ${e}`)
+      alert('Microphone access denied.')
+      return
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg'
+    dbg(`using mimeType=${mimeType}`)
+    const recorder = new MediaRecorder(stream, { mimeType })
+    mediaRecorderRef.current = recorder
+    const chunks: Blob[] = []
+
+    recorder.ondataavailable = (e) => {
+      dbg(`ondataavailable size=${e.data.size}`)
+      if (e.data.size > 0) chunks.push(e.data)
+    }
+
+    recorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop())
+      setIsRecording(false)
+      dbg(`recorder stopped, chunks=${chunks.length}, connected=${connected}`)
+      if (!connected) return
+      const blob = new Blob(chunks, { type: mimeType })
+      dbg(`uploading audio blob size=${blob.size}`)
+      try {
+        const { text } = await api.transcribeAudio(blob, getIdToken)
+        dbg(`transcribed: ${text}`)
+        console.log('[transcribe] heard:', text)
+        if (text) {
+          send(text)
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+        }
+      } catch (e) {
+        dbg(`transcribe error: ${e}`)
+        console.error('[transcribe] error:', e)
+      }
+    }
+
+    recorder.start()
+    setIsRecording(true)
+    dbg('recorder started')
   }
 
   const statusLabel = !connected
@@ -192,7 +259,7 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
             </div>
 
             {/* Top right icons */}
-            <div className="absolute top-4 right-4 flex items-center gap-2">
+            <div className="absolute top-4 right-4 flex items-center gap-2 z-30">
               <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
                 <ExternalLink className="w-4 h-4" />
               </button>
@@ -202,12 +269,19 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
             </div>
 
             {/* Bottom controls */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30">
               <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
                 <Video className="w-5 h-5" />
               </button>
-              <button className="w-16 h-16 rounded-full bg-indigo-light hover:bg-indigo flex items-center justify-center text-white transition-colors cursor-pointer shadow-[0_4px_20px_rgba(129,140,248,0.4)]">
-                <Mic className="w-6 h-6" />
+              <button
+                onClick={toggleRecording}
+                className={`w-16 h-16 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer ${
+                  isRecording
+                    ? 'bg-[#E11D48] hover:bg-[#be123c] shadow-[0_4px_24px_rgba(225,29,72,0.55)] animate-pulse'
+                    : 'bg-indigo-light hover:bg-indigo shadow-[0_4px_20px_rgba(129,140,248,0.4)]'
+                }`}
+              >
+                {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
               </button>
               <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
                 <Settings className="w-5 h-5" />
@@ -296,6 +370,30 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
           </div>
         </div>
       </div>
+
+      {DEBUG && (
+        <div className="shrink-0 px-4 py-2 bg-black/90 text-green-400 text-[11px] font-mono flex flex-col gap-1 max-h-40 overflow-y-auto">
+          <div className="flex items-center gap-4 text-white/60 shrink-0">
+            <span>ws:{connected ? <span className="text-green-400">connected</span> : <span className="text-red-400">disconnected</span>}</span>
+            <span>appState:{appState}</span>
+            <span>isRecording:{String(isRecording)}</span>
+            <button
+              className="border border-white/30 px-2 py-0.5 rounded text-white/80 hover:text-white cursor-pointer"
+              onClick={() => {
+                const a = musicRef.current
+                if (!a) return dbg('no audio element')
+                dbg(`audio: paused=${a.paused} muted=${a.muted} readyState=${a.readyState}`)
+                a.play().then(() => dbg('manual play OK')).catch((e) => dbg(`manual play failed: ${e}`))
+              }}
+            >test audio</button>
+            <button
+              className="border border-white/30 px-2 py-0.5 rounded text-white/80 hover:text-white cursor-pointer"
+              onClick={() => dbg('ping')}
+            >ping</button>
+          </div>
+          {debugLog.map((l, i) => <span key={i}>{l}</span>)}
+        </div>
+      )}
 
       {DEV_OVERLAY && (
         <div className="shrink-0 px-8 py-3 bg-black/80 text-white text-xs flex items-center gap-6 font-mono">

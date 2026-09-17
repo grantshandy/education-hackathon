@@ -12,7 +12,8 @@ export const CHAR_X     = 22.4  // % from left edge
 export const CHAR_Y     = 3.3  // % from top edge
 export const CHAR_SCALE = 93.0  // character height as % of video height
 
-export const DEV_OVERLAY = false  // set true to show sliders + 50% opacity
+export const DEV_OVERLAY = false  // set true to show character position sliders
+export const DEBUG = false        // set true to show WS status panel and log events
 // ─────────────────────────────────────────────────────────────────────────
 
 export function LofiBackground() {
@@ -37,7 +38,7 @@ export function LofiBackground() {
       muted
       loop
       playsInline
-      className="absolute inset-0 w-full h-full object-cover"
+      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
     />
   )
 }

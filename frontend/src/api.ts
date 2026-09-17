@@ -77,4 +77,21 @@ export const api = {
 
   generateSummary: (sessionId: string, getIdToken: TokenGetter): Promise<{ summary: string }> =>
     apiFetch(`/sessions/${sessionId}/summary`, { method: 'POST' }, getIdToken),
+
+  transcribeAudio: async (blob: Blob, getIdToken: TokenGetter): Promise<{ text: string }> => {
+    const token = await getIdToken()
+    const res = await fetch(`${API_URL}/transcribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': blob.type,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: blob,
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      throw new Error(`transcribe ${res.status}: ${body}`)
+    }
+    return res.json()
+  },
 }

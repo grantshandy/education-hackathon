@@ -1,12 +1,15 @@
 import base64
 import json
 import os
+import time
 import uuid
+import urllib.request
 import boto3
 
 bedrock = boto3.client("bedrock-runtime")
 polly = boto3.client("polly")
 s3 = boto3.client("s3")
+transcribe = boto3.client("transcribe")
 
 MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 VOICE_ID = os.environ.get("POLLY_VOICE_ID", "Joanna")
@@ -79,36 +82,128 @@ def _synthesize(text: str) -> dict:
     return {"audio_url": audio_url, "visemes": visemes}
 
 
+def _transcribe_audio(audio_b64: str, content_type: str) -> str:
+    """Upload audio to S3, run Transcribe, return transcript text."""
+    audio_bytes = base64.b64decode(audio_b64)
+
+    # Map browser MIME types to Transcribe media formats
+    fmt_map = {
+        "audio/webm": "webm",
+        "audio/ogg": "ogg",
+        "audio/mp4": "mp4",
+        "audio/mpeg": "mp3",
+        "audio/wav": "wav",
+        "audio/flac": "flac",
+    }
+    base_type = content_type.split(";")[0].strip().lower()
+    media_format = fmt_map.get(base_type, "webm")
+
+    ext = media_format
+    key = f"transcribe-input/{uuid.uuid4()}.{ext}"
+    s3.put_object(Bucket=AUDIO_BUCKET, Key=key, Body=audio_bytes, ContentType=content_type)
+
+    job_name = f"study-buddy-{uuid.uuid4().hex}"
+    s3_uri = f"s3://{AUDIO_BUCKET}/{key}"
+
+    transcribe.start_transcription_job(
+        TranscriptionJobName=job_name,
+        Media={"MediaFileUri": s3_uri},
+        MediaFormat=media_format,
+        LanguageCode="en-US",
+    )
+
+    # Poll until complete (max ~90s, well within 120s Lambda timeout)
+    for _ in range(45):
+        time.sleep(2)
+        resp = transcribe.get_transcription_job(TranscriptionJobName=job_name)
+        status = resp["TranscriptionJob"]["TranscriptionJobStatus"]
+        if status == "COMPLETED":
+            transcript_uri = resp["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
+            with urllib.request.urlopen(transcript_uri) as r:
+                data = json.loads(r.read())
+            text = data["results"]["transcripts"][0]["transcript"].strip()
+            try:
+                s3.delete_object(Bucket=AUDIO_BUCKET, Key=key)
+            except Exception:
+                pass
+            return text
+        if status == "FAILED":
+            try:
+                s3.delete_object(Bucket=AUDIO_BUCKET, Key=key)
+            except Exception:
+                pass
+            raise RuntimeError("Transcription job failed")
+
+    try:
+        s3.delete_object(Bucket=AUDIO_BUCKET, Key=key)
+    except Exception:
+        pass
+    raise TimeoutError("Transcription job timed out")
+
+
+def _send(apigw, connection_id, data):
+    print(f"[send] {data[:120]}")
+    apigw.post_to_connection(ConnectionId=connection_id, Data=data)
+
+
 def lambda_handler(event, context):
     connection_id = event["requestContext"]["connectionId"]
+    print(f"[handler] connectionId={connection_id}")
     apigw = _apigw_client(event)
 
     body = json.loads(event.get("body") or "{}")
-    text = body.get("text", "").strip()
+    action = body.get("action", "message")
+    print(f"[handler] action={action}")
 
-    if not text:
-        apigw.post_to_connection(
-            ConnectionId=connection_id,
-            Data=json.dumps({"type": "error", "message": "empty message"}),
-        )
-        return {"statusCode": 400}
+    if action == "audio":
+        audio_b64 = body.get("audio", "")
+        content_type = body.get("content_type", "audio/webm")
+        print(f"[handler] audio b64_len={len(audio_b64)} content_type={content_type}")
 
-    apigw.post_to_connection(
-        ConnectionId=connection_id,
-        Data=json.dumps({"type": "thinking"}),
-    )
+        if not audio_b64:
+            _send(apigw, connection_id, json.dumps({"type": "error", "message": "empty audio"}))
+            return {"statusCode": 400}
 
+        _send(apigw, connection_id, json.dumps({"type": "thinking"}))
+
+        try:
+            text = _transcribe_audio(audio_b64, content_type)
+            print(f"[transcribe] result: {text!r}")
+        except Exception as e:
+            print(f"[transcribe] FAILED: {e}")
+            _send(apigw, connection_id, json.dumps({"type": "error", "message": f"Transcription failed: {e}"}))
+            return {"statusCode": 500}
+
+        if not text:
+            print("[transcribe] empty transcript")
+            _send(apigw, connection_id, json.dumps({"type": "error", "message": "Could not understand audio"}))
+            return {"statusCode": 400}
+
+        _send(apigw, connection_id, json.dumps({"type": "transcript", "text": text}))
+
+    else:
+        text = body.get("text", "").strip()
+        print(f"[handler] text={text!r}")
+
+        if not text:
+            _send(apigw, connection_id, json.dumps({"type": "error", "message": "empty message"}))
+            return {"statusCode": 400}
+
+        _send(apigw, connection_id, json.dumps({"type": "thinking"}))
+
+    print("[handler] calling bedrock")
     response_text = _ask_bedrock(text)
-    speech = _synthesize(response_text)
+    print(f"[handler] bedrock response: {response_text[:80]!r}")
 
-    apigw.post_to_connection(
-        ConnectionId=connection_id,
-        Data=json.dumps({
-            "type": "response",
-            "text": response_text,
-            "audio_url": speech["audio_url"],
-            "visemes": speech["visemes"],
-        }),
-    )
+    print("[handler] synthesizing speech")
+    speech = _synthesize(response_text)
+    print("[handler] synthesis done, sending response")
+
+    _send(apigw, connection_id, json.dumps({
+        "type": "response",
+        "text": response_text,
+        "audio_url": speech["audio_url"],
+        "visemes": speech["visemes"],
+    }))
 
     return {"statusCode": 200}
