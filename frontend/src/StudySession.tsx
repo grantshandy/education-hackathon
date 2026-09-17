@@ -338,13 +338,14 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
         </button>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex px-8 pb-6 gap-6 min-h-0">
+      {/* Main content — side by side on wide screens, stacked on narrow */}
+      <div className="flex-1 flex flex-col lg:flex-row px-8 pb-6 gap-6 min-h-0">
 
-        {/* Left — character */}
-        <div className="flex-[60] flex flex-col min-w-0">
-          <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
-            <div className="relative w-full h-full" style={{ maxWidth: 'calc((100vh - 200px) * 4/3)' }}>
+        {/* Character panel */}
+        <div className="lg:flex-[60] flex flex-col min-w-0 shrink-0">
+          <div className="w-full">
+            {/* Aspect-ratio box: always 4:3, never distorted */}
+            <div className="relative w-full" style={{ paddingBottom: '75%' }}>
             <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-900">
             <LofiBackground />
             <div
@@ -390,8 +391,8 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
           </div>
         </div>
 
-        {/* Right — chat panel */}
-        <div className="flex-[40] flex flex-col min-w-0 min-h-0">
+        {/* Chat panel — beside character on wide screens, below on narrow */}
+        <div className="lg:flex-[40] flex flex-col min-w-0 min-h-0 lg:min-h-0" style={{ minHeight: '400px' }}>
           {/* Music bar */}
           <div className="shrink-0 flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-indigo-bg flex items-center justify-center shrink-0">
