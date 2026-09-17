@@ -24,11 +24,13 @@ export default function DashboardPage({
   onOpenCourse,
   onLogout,
   onHome,
+  onSettings,
 }: {
   onStartSession: (sessionId: string) => void
   onOpenCourse: (courseId: string) => void
   onLogout?: () => void
   onHome?: () => void
+  onSettings?: () => void
 }) {
   const { user, getIdToken } = useAuth()
   const [showStartModal, setShowStartModal] = useState(false)
@@ -136,7 +138,7 @@ export default function DashboardPage({
           <span className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Dashboard
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
           <button
