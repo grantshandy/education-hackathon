@@ -10,13 +10,9 @@ import {
   GraduationCap,
   Mic,
   MicOff,
-  Video,
-  Settings,
   Paperclip,
   ArrowUp,
   Square,
-  ExternalLink,
-  Minus,
   Play,
   Pause,
   Music,
@@ -29,9 +25,9 @@ import {
 const REST_IMAGE      = '/studying.png'
 const ATTENTION_IMAGE = '/at-attention.png'
 
-export default function StudySession({ sessionId, onExit, onHome }: { sessionId: string | null; onExit: () => void; onHome?: () => void }) {
+export default function StudySession({ sessionId, onExit, onHome, onSettings }: { sessionId: string | null; onExit: () => void; onHome?: () => void; onSettings?: () => void }) {
   const { getIdToken } = useAuth()
-  const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken, sessionId)
+  const { appState, transcript, currentViseme, send, stopSpeaking, connected } = useStudyBuddy(getIdToken, sessionId)
   const [input, setInput] = useState('')
   const [charX, setCharX] = useState(CHAR_X)
   const [charY, setCharY] = useState(CHAR_Y)
@@ -189,9 +185,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     }
   }
 
-  function togglePiP() {
-    // PiP not available with GIF background
-  }
+
 
   async function toggleRecording() {
     dbg(`toggleRecording called, isRecording=${isRecording}, connected=${connected}`)
@@ -310,7 +304,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
           <span onClick={onExit} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Dashboard
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
           <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
@@ -373,21 +367,8 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
               </div>
             </div>
 
-            {/* Top right icons */}
-            <div className="absolute top-4 right-4 flex items-center gap-2 z-30">
-              <button onClick={togglePiP} className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer" title="Picture-in-Picture">
-                <ExternalLink className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer">
-                <Minus className="w-4 h-4" />
-              </button>
-            </div>
-
             {/* Bottom controls */}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30">
-              <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
-                <Video className="w-5 h-5" />
-              </button>
               <button
                 onClick={toggleRecording}
                 className={`w-16 h-16 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer ${
@@ -397,9 +378,6 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
                 }`}
               >
                 {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </button>
-              <button className="w-12 h-12 rounded-full bg-gray-800/80 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-gray-700/80 transition-colors cursor-pointer">
-                <Settings className="w-5 h-5" />
               </button>
             </div>
             </div>
@@ -444,9 +422,20 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
                         <div className="bg-white border border-cream-border rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-ink leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-pre:bg-gray-50 prose-pre:rounded-lg prose-code:text-indigo-dark prose-code:before:content-none prose-code:after:content-none">
                           <ReactMarkdown>{msg.text}</ReactMarkdown>
                         </div>
-                        <span className="text-[11px] text-ink-muted pl-1">
-                          {formatTime(sessionStart, i)}
-                        </span>
+                        <div className="flex items-center gap-2 pl-1">
+                          <span className="text-[11px] text-ink-muted">
+                            {formatTime(sessionStart, i)}
+                          </span>
+                          {appState === 'talking' && i === transcript.length - 1 && (
+                            <button
+                              onClick={stopSpeaking}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-cream-border-dark/50 hover:bg-cream-border-dark text-ink-secondary text-[11px] font-medium transition-colors cursor-pointer"
+                            >
+                              <Square className="w-2.5 h-2.5 fill-current" />
+                              Stop
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ) : (

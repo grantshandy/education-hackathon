@@ -7,10 +7,12 @@ import HomePage from './HomePage'
 import DashboardPage from './DashboardPage'
 import StudySession from './StudySession'
 import CoursePage from './CoursePage'
+import SettingsPage from './SettingsPage'
+import { ThemeProvider } from './ThemeContext'
 
 const isDev = import.meta.env.DEV
 
-type Page = 'home' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'session' | 'course'
+type Page = 'home' | 'login' | 'signup' | 'forgot-password' | 'dashboard' | 'session' | 'course' | 'settings'
 
 function AppRoutes() {
   const { user, loading, logout } = useAuth()
@@ -23,7 +25,7 @@ function AppRoutes() {
     if (debugBypass) return page
     if (user && (page === 'login' || page === 'signup' || page === 'forgot-password'))
       return 'dashboard' as const
-    if (!user && (page === 'dashboard' || page === 'session' || page === 'course'))
+    if (!user && (page === 'dashboard' || page === 'session' || page === 'course' || page === 'settings'))
       return 'login' as const
     return page
   }, [user, page, debugBypass])
@@ -77,19 +79,32 @@ function AppRoutes() {
             setPage('home')
           }}
           onHome={() => setPage('home')}
+          onSettings={() => setPage('settings')}
         />
       )
     case 'session':
-      return <StudySession sessionId={activeSessionId} onExit={() => setPage('dashboard')} onHome={() => setPage('home')} />
+      return <StudySession sessionId={activeSessionId} onExit={() => setPage('dashboard')} onHome={() => setPage('home')} onSettings={() => setPage('settings')} />
     case 'course':
       return (
         <CoursePage
           courseId={selectedCourseId!}
           onBack={() => setPage('dashboard')}
           onHome={() => setPage('home')}
+          onSettings={() => setPage('settings')}
           onStartSession={(sessionId) => {
             setActiveSessionId(sessionId)
             setPage('session')
+          }}
+        />
+      )
+    case 'settings':
+      return (
+        <SettingsPage
+          onHome={() => setPage('home')}
+          onDashboard={() => setPage('dashboard')}
+          onLogout={async () => {
+            await logout()
+            setPage('home')
           }}
         />
       )
@@ -98,6 +113,7 @@ function AppRoutes() {
         <HomePage
           onStart={() => setPage('login')}
           onStudySessions={() => setPage('dashboard')}
+          onSettings={() => setPage('settings')}
           onDebugSession={isDev ? () => { setDebugBypass(true); setPage('session') } : undefined}
         />
       )
@@ -106,8 +122,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

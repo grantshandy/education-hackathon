@@ -13,6 +13,7 @@ export interface StudyBuddyState {
   transcript: { role: 'user' | 'buddy'; text: string; attachments?: string[] }[]
   currentViseme: string
   send: (text: string, attachments?: string[]) => void
+  stopSpeaking: () => void
   connected: boolean
 }
 
@@ -104,6 +105,11 @@ export function useStudyBuddy(
     setCurrentViseme('sil')
   }
 
+  const stopSpeaking = useCallback(() => {
+    stopAudio()
+    setAppState('idle')
+  }, [])
+
   async function playResponse(audioUrl: string, visemes: Viseme[]) {
     console.log('[audio] playResponse called, url:', audioUrl?.slice(0, 80))
     stopAudio()
@@ -157,5 +163,5 @@ export function useStudyBuddy(
     }
   }, [])
 
-  return { appState, transcript, currentViseme, send, connected }
+  return { appState, transcript, currentViseme, send, stopSpeaking, connected }
 }

@@ -26,3 +26,37 @@
   --color-indigo-bg: #FDF0E8;
   --color-indigo-dark: #4A2C1A;
 }
+
+:root.dark {
+  --color-cream-50: #1a1512;
+  --color-cream-100: #211c17;
+  --color-cream-200: #2a231c;
+  --color-cream-border: #3d3228;
+  --color-cream-border-dark: #4a3d31;
+  --color-cream-muted: #5c4d3e;
+  --color-cream-dash-border: #6b5a48;
+
+  --color-card: #2a2e29;
+  --color-card-border: #3d4239;
+
+  --color-ink: #E8DFD3;
+  --color-ink-secondary: #B8A898;
+  --color-ink-muted: #8A7B6E;
+
+  --color-indigo: #D4896A;
+  --color-indigo-light: #E0A080;
+  --color-indigo-bg: #2e2018;
+  --color-indigo-dark: #E8C8B0;
+}
+
+:root.dark body {
+  background-color: #1a1512;
+}
+
+.dark nav {
+  background-color: #211c17 !important;
+}
+
+.dark .bg-white {
+  background-color: #211c17;
+}

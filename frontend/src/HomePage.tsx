@@ -29,10 +29,12 @@ const STEPS = [
 export default function HomePage({
   onStart,
   onStudySessions,
+  onSettings,
   onDebugSession,
 }: {
   onStart: () => void
   onStudySessions?: () => void
+  onSettings?: () => void
   onDebugSession?: () => void
 }) {
   return (
@@ -52,7 +54,7 @@ export default function HomePage({
           <span onClick={onStudySessions} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Dashboard
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
           <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />

@@ -33,11 +33,13 @@ export default function CoursePage({
   onBack,
   onStartSession,
   onHome,
+  onSettings,
 }: {
   courseId: string
   onBack: () => void
   onStartSession: (sessionId: string) => void
   onHome?: () => void
+  onSettings?: () => void
 }) {
   const { getIdToken } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
@@ -169,7 +171,7 @@ export default function CoursePage({
           <span onClick={onBack} className="text-[15px] font-semibold text-indigo-light cursor-pointer">
             Dashboard
           </span>
-          <span className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
+          <span onClick={onSettings} className="text-[15px] font-medium text-ink-secondary cursor-pointer hover:text-ink transition-colors">
             Settings
           </span>
           <div className="w-10 h-10 rounded-full bg-indigo-bg border-2 border-indigo-light" />
