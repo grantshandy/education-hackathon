@@ -351,7 +351,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
             <div
               className="absolute z-10 inset-0"
               style={{
-                opacity:    DEV_OVERLAY ? 0.5 : (appState === 'idle' ? 0 : 1),
+                opacity:    DEV_OVERLAY ? 1 : (appState === 'idle' ? 0 : 1),
                 transition: DEV_OVERLAY ? undefined : 'opacity 300ms ease',
               }}
             >
@@ -575,24 +575,6 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
         </div>
       )}
 
-      {DEV_OVERLAY && (
-        <div className="shrink-0 px-8 py-3 bg-black/80 text-white text-xs flex items-center gap-6 font-mono">
-          <span className="text-white/50">overlay</span>
-          <label className="flex items-center gap-2">
-            X <span className="w-12 text-right">{charX.toFixed(1)}%</span>
-            <input type="range" min={0} max={100} step={0.1} value={charX} onChange={e => setCharX(Number(e.target.value))} className="w-32" />
-          </label>
-          <label className="flex items-center gap-2">
-            Y <span className="w-12 text-right">{charY.toFixed(1)}%</span>
-            <input type="range" min={0} max={100} step={0.1} value={charY} onChange={e => setCharY(Number(e.target.value))} className="w-32" />
-          </label>
-          <label className="flex items-center gap-2">
-            H% <span className="w-12 text-right">{charScale.toFixed(1)}%</span>
-            <input type="range" min={1} max={100} step={0.1} value={charScale} onChange={e => setCharScale(Number(e.target.value))} className="w-32" />
-          </label>
-          <span className="text-yellow-300 select-all">CHAR_X={charX.toFixed(1)} CHAR_Y={charY.toFixed(1)} CHAR_SCALE={charScale.toFixed(1)}</span>
-        </div>
-      )}
 
 {showPostStudy && (
         <PostStudyModal

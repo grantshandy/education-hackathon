@@ -17,9 +17,9 @@
   "o": "/sprites/viseme_o.png",
   "O": "/sprites/viseme_o.png",
   "mouthPosition": {
-    "left": 55.3,
-    "top": 42.1,
-    "width": 6.6,
-    "height": 7.8
+    "left": 60,
+    "top": 39.6,
+    "width": 14.2,
+    "height": 12.5
   }
 }

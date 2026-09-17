@@ -34,6 +34,16 @@ export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: P
   useEffect(() => { talkingRef.current = talking }, [talking])
   useEffect(() => { charStateRef.current = charState }, [charState])
 
+  // In dev mode, seek transition_in to its last frame so the talking pose is visible
+  useEffect(() => {
+    if (!devOverlay) return
+    const vid = transInRef.current
+    if (!vid) return
+    const seekToEnd = () => { vid.currentTime = vid.duration }
+    if (vid.readyState >= 1) seekToEnd()
+    else vid.addEventListener('loadedmetadata', seekToEnd, { once: true })
+  }, [devOverlay])
+
   useEffect(() => {
     fetch('/sprites/manifest.json')
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -85,6 +95,8 @@ export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: P
   }, [talking])
 
   function handleTransInEnded() {
+    // Pause on the last frame — video stays visible while charState === 'talking'
+    if (transInRef.current) transInRef.current.pause()
     if (talkingRef.current) {
       setCharState('talking')
       setActiveViseme('sil')
@@ -114,22 +126,51 @@ export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: P
   const activeUrl = spriteFor(activeViseme)
 
   return (
+    <>
+    {devOverlay && mouthPos && (
+      <div className="absolute top-2 left-2 z-50 bg-black/70 text-white text-xs p-2 rounded flex flex-col gap-1" style={{ pointerEvents: 'all' }}>
+        {(['left', 'top', 'width', 'height'] as const).map(key => (
+          <label key={key} className="flex items-center gap-2">
+            <span className="w-12">{key}</span>
+            <input
+              type="range"
+              min={key === 'width' || key === 'height' ? 1 : 0}
+              max={key === 'width' || key === 'height' ? 30 : 100}
+              step={0.1}
+              value={mouthPos[key]}
+              onChange={e => setMouthPos(prev => prev ? { ...prev, [key]: parseFloat(e.target.value) } : prev)}
+              className="w-32"
+            />
+            <span className="w-10 text-right">{mouthPos[key].toFixed(1)}</span>
+          </label>
+        ))}
+        <button
+          className="mt-1 text-xs bg-white/20 hover:bg-white/30 rounded px-2 py-0.5"
+          onClick={() => navigator.clipboard.writeText(JSON.stringify(mouthPos, null, 2))}
+        >
+          Copy JSON
+        </button>
+      </div>
+    )}
     <div className="absolute inset-0">
 
-      {/* Base layer: at-attention face shown during talking */}
-      <img
-        src={attentionSrc}
-        alt=""
+      {/* Transition in: studying → looking at camera, then holds last frame while talking */}
+      <video
+        ref={transInRef}
+        src="/sprites/transition_in.mp4"
+        muted
+        playsInline
+        preload="auto"
+        onEnded={handleTransInEnded}
         className="absolute inset-0 w-full h-full object-cover"
         style={{
-          opacity: isTalking ? 1 : 0,
-          transition: `opacity ${FADE_MS}ms linear`,
+          opacity: devOverlay || charState === 'transitioning_in' || charState === 'talking' ? 1 : 0,
           pointerEvents: 'none',
         }}
       />
 
-      {/* Mouth sprites — cropped and positioned if mouthPosition exists */}
-      {mouthPos ? (
+      {/* Mouth sprites overlaid on the held last frame */}
+      {mouthPos && (
         <div
           className="absolute"
           style={{
@@ -147,43 +188,14 @@ export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: P
               alt=""
               className="absolute inset-0 w-full h-full"
               style={{
-                objectFit: 'fill',
+                objectFit: 'contain',
                 opacity: isTalking && url === activeUrl ? 1 : 0,
                 transition: `opacity ${FADE_MS}ms linear`,
               }}
             />
           ))}
         </div>
-      ) : (
-        mouthUrls.map(url => (
-          <img
-            key={url}
-            src={url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              opacity: isTalking && url === activeUrl ? 1 : 0,
-              transition: `opacity ${FADE_MS}ms linear`,
-              pointerEvents: 'none',
-            }}
-          />
-        ))
       )}
-
-      {/* Transition in: studying → looking at camera */}
-      <video
-        ref={transInRef}
-        src="/sprites/transition_in.mp4"
-        muted
-        playsInline
-        preload="auto"
-        onEnded={handleTransInEnded}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{
-          opacity: charState === 'transitioning_in' ? 1 : 0,
-          pointerEvents: 'none',
-        }}
-      />
 
       {/* Transition out: looking at camera → studying */}
       <video
@@ -200,5 +212,6 @@ export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: P
         }}
       />
     </div>
+    </>
   )
 }
