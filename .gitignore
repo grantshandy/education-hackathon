@@ -12,3 +12,4 @@ node_modules/
 dist/
 .env
 .direnv
+frontend/public/sprites/backup_original/
