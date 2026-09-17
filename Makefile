@@ -14,7 +14,7 @@ deploy: build
 	sam deploy --guided --stack-name $(STACK_NAME) --region $(REGION)
 
 update: build
-	sam deploy --stack-name $(STACK_NAME) --region $(REGION) --no-confirm-changeset
+	sam deploy --stack-name $(STACK_NAME) --region $(REGION) --no-confirm-changeset --resolve-s3 --capabilities CAPABILITY_IAM
 
 logs:
 	sam logs -n $(FUNCTION) --stack-name $(STACK_NAME) --region $(REGION) --tail
@@ -25,7 +25,7 @@ download-lofi:
 # ── Frontend ──────────────────────────────────────────────────────────────
 
 deploy-frontend:
-	cd frontend && npm run build
+	cd frontend && npm install && npm run build
 	aws s3 sync frontend/dist/ s3://$(BUCKET)/ --delete --region $(REGION)
 	aws cloudfront create-invalidation --distribution-id $(DIST_ID) --paths "/*"
 	@echo "Live at: https://d3h6z54ed7kcqq.cloudfront.net"
