@@ -19,7 +19,7 @@ interface Props {
   devOverlay?: boolean
 }
 
-export function CharacterCanvas({ attentionSrc, viseme, talking, devOverlay }: Props) {
+export function CharacterCanvas({ viseme, talking, devOverlay }: Props) {
   const [spriteMap, setSpriteMap] = useState<Record<string, string>>({})
   const [mouthPos, setMouthPos] = useState<MouthPosition | null>(null)
   const [mouthUrls, setMouthUrls] = useState<string[]>([])

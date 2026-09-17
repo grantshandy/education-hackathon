@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { api } from './api'
 import { CharacterCanvas } from './CharacterCanvas'
-import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY, DEBUG } from './LofiBackground'
+import { LofiBackground, MUSIC_URL, DEV_OVERLAY, DEBUG } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
@@ -29,9 +29,6 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
   const { getIdToken, user } = useAuth()
   const { appState, transcript, currentViseme, send, stopSpeaking, connected } = useStudyBuddy(getIdToken, sessionId)
   const [input, setInput] = useState('')
-  const [charX, setCharX] = useState(CHAR_X)
-  const [charY, setCharY] = useState(CHAR_Y)
-  const [charScale, setCharScale] = useState(CHAR_SCALE)
   const [showPostStudy, setShowPostStudy] = useState(false)
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
@@ -349,8 +346,8 @@ export default function StudySession({ sessionId, onExit, onHome, onSettings }: 
             <div
               className="absolute z-10 inset-0"
               style={{
-                opacity:    DEV_OVERLAY ? 1 : (appState === 'idle' ? 0 : 1),
-                transition: DEV_OVERLAY ? undefined : 'opacity 300ms ease',
+                opacity:    DEV_OVERLAY ? 0.5 : 1,
+                pointerEvents: 'none',
               }}
             >
               <CharacterCanvas
