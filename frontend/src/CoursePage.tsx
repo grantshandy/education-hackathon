@@ -25,10 +25,12 @@ export default function CoursePage({
   courseId,
   onBack,
   onStartSession,
+  onHome,
 }: {
   courseId: string
   onBack: () => void
   onStartSession: (sessionId: string) => void
+  onHome?: () => void
 }) {
   const { getIdToken } = useAuth()
   const [course, setCourse] = useState<Course | null>(null)
@@ -138,14 +140,14 @@ export default function CoursePage({
     <div className="min-h-screen bg-cream-100 flex flex-col font-instrument">
       {/* Nav */}
       <nav className="h-20 px-[120px] flex items-center justify-between border-b border-cream-border-dark bg-white shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
           <div className="w-8 h-8 bg-indigo rounded-[10px] flex items-center justify-center">
             <GraduationCap className="w-[18px] h-[18px] text-white" />
           </div>
           <span className="font-bold text-xl text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span onClick={onBack} className="text-[15px] font-medium text-indigo-dark cursor-pointer">
+          <span onClick={onHome} className="text-[15px] font-medium text-indigo-dark cursor-pointer">
             Home
           </span>
           <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer hover:text-indigo-dark transition-colors">

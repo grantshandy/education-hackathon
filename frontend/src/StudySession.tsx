@@ -20,7 +20,7 @@ import {
 const REST_IMAGE      = '/studying.png'
 const ATTENTION_IMAGE = '/at-attention.jpg'
 
-export default function StudySession({ sessionId, onExit }: { sessionId: string | null; onExit: () => void }) {
+export default function StudySession({ sessionId, onExit, onHome }: { sessionId: string | null; onExit: () => void; onHome?: () => void }) {
   const { getIdToken } = useAuth()
   const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken)
   const [input, setInput] = useState('')
@@ -115,7 +115,7 @@ export default function StudySession({ sessionId, onExit }: { sessionId: string 
           <span className="font-bold text-lg text-indigo-dark">StudyMate</span>
         </div>
         <div className="flex items-center gap-8">
-          <span className="text-[15px] font-medium text-indigo-dark cursor-pointer">
+          <span onClick={onHome} className="text-[15px] font-medium text-indigo-dark cursor-pointer">
             Home
           </span>
           <span className="text-[15px] font-medium text-[#5C5A80] cursor-pointer">
