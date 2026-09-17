@@ -26,6 +26,6 @@ download-lofi:
 
 deploy-frontend:
 	cd frontend && npm install && npm run build
-	aws s3 sync frontend/dist/ s3://$(BUCKET)/ --delete --region $(REGION)
+	aws s3 sync frontend/dist/ s3://$(BUCKET)/ --delete --region $(REGION) --cache-control "no-cache"
 	aws cloudfront create-invalidation --distribution-id $(DIST_ID) --paths "/*"
 	@echo "Live at: https://d3h6z54ed7kcqq.cloudfront.net"
