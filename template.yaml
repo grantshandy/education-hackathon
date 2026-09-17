@@ -25,6 +25,14 @@ Parameters:
   GoogleClientSecret:
     Type: String
     NoEcho: true
+  KnowledgeBaseId:
+    Type: String
+    Default: ""
+    Description: Bedrock Knowledge Base ID (created via console or setup script)
+  DataSourceId:
+    Type: String
+    Default: ""
+    Description: Knowledge Base S3 data source ID
 
 Resources:
 
@@ -300,6 +308,108 @@ Resources:
             Path: /transcribe
             Method: POST
 
+  # ── Session cleanup (sweep stale active sessions) ─────────────────────────
+  SessionCleanupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/session_cleanup/
+      Handler: handler.lambda_handler
+      Timeout: 60
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+      Events:
+        ScheduledSweep:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Enabled: true
+
+  # ── Documents ─────────────────────────────────────────────────────────────
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-documents-${AWS::AccountId}"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "http://localhost:5173"
+              - "http://localhost:5174"
+              - "http://localhost:5175"
+              - !Sub "https://${CloudFrontDistribution.DomainName}"
+            AllowedMethods: [GET, PUT]
+            AllowedHeaders: ["*"]
+            MaxAge: 300
+      LifecycleConfiguration:
+        Rules:
+          - Id: CleanupOldDocs
+            Status: Enabled
+            ExpirationInDays: 30
+
+  DocumentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/functions/api_documents/
+      Handler: handler.lambda_handler
+      Timeout: 300
+      MemorySize: 512
+      Environment:
+        Variables:
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPool
+          COGNITO_REGION: !Sub "${AWS::Region}"
+          GOOGLE_CLIENT_ID: !Ref GoogleClientId
+          DOCUMENTS_BUCKET: !Ref DocumentsBucket
+          KNOWLEDGE_BASE_ID: !Ref KnowledgeBaseId
+          DATA_SOURCE_ID: !Ref DataSourceId
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref DocumentsBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:StartIngestionJob
+                - bedrock:GetIngestionJob
+                - bedrock:ListIngestionJobs
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - textract:DetectDocumentText
+                - textract:StartDocumentAnalysis
+                - textract:GetDocumentAnalysis
+                - textract:StartDocumentTextDetection
+                - textract:GetDocumentTextDetection
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-*"
+      Events:
+        RequestUpload:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/upload
+            Method: POST
+        ProcessDocuments:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/process
+            Method: POST
+        ListDocuments:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /sessions/{sessionId}/documents
+            Method: GET
+
   # ── Lambda functions ──────────────────────────────────────────────────────
   ConnectFunction:
     Type: AWS::Serverless::Function
@@ -330,14 +440,19 @@ Resources:
       CodeUri: backend/functions/ws_message/
       Handler: handler.lambda_handler
       Timeout: 120
+      MemorySize: 512
       Environment:
         Variables:
           BEDROCK_MODEL_ID: !Ref BedrockModelId
           POLLY_VOICE_ID: Joanna
           AUDIO_BUCKET: !Ref AudioBucket
+          KNOWLEDGE_BASE_ID: !Ref KnowledgeBaseId
+          DOCUMENTS_BUCKET: !Ref DocumentsBucket
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref ConnectionsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref SessionsTable
         - S3WritePolicy:
             BucketName: !Ref AudioBucket
         - Statement:
@@ -349,7 +464,13 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+                - s3:GetObject
+              Resource: !Sub "${DocumentsBucket.Arn}/*"
+        - Statement:
+            - Effect: Allow
+              Action:
                 - bedrock:InvokeModel
+                - bedrock:Retrieve
               Resource: "*"
             - Effect: Allow
               Action:

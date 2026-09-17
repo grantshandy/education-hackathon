@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useAuth } from './AuthContext'
 import { useStudyBuddy } from './useStudyBuddy'
 import { api } from './api'
 import { CharacterCanvas } from './CharacterCanvas'
-import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY, DEBUG, type LofiBackgroundHandle } from './LofiBackground'
+import { LofiBackground, MUSIC_URL, CHAR_X, CHAR_Y, CHAR_SCALE, DEV_OVERLAY, DEBUG } from './LofiBackground'
 import PostStudyModal from './PostStudyModal'
 import {
   GraduationCap,
@@ -21,32 +22,28 @@ import {
   Music,
   X,
   FileText,
+  Loader2,
+  Check,
 } from 'lucide-react'
 
 const REST_IMAGE      = '/studying.png'
-const ATTENTION_IMAGE = '/at-attention.jpg'
+const ATTENTION_IMAGE = '/at-attention.png'
 
 export default function StudySession({ sessionId, onExit, onHome }: { sessionId: string | null; onExit: () => void; onHome?: () => void }) {
   const { getIdToken } = useAuth()
-  const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken)
+  const { appState, transcript, currentViseme, send, connected } = useStudyBuddy(getIdToken, sessionId)
   const [input, setInput] = useState('')
   const [charX, setCharX] = useState(CHAR_X)
   const [charY, setCharY] = useState(CHAR_Y)
   const [charScale, setCharScale] = useState(CHAR_SCALE)
-  const activeX = DEV_OVERLAY ? charX : CHAR_X
-  const activeY = DEV_OVERLAY ? charY : CHAR_Y
-  const activeScale = DEV_OVERLAY ? charScale : CHAR_SCALE
   const [showPostStudy, setShowPostStudy] = useState(false)
   const [generatedSummary, setGeneratedSummary] = useState<string | null>(null)
   const [generatingSummary, setGeneratingSummary] = useState(false)
-  const [muted, setMuted] = useState(false)
   const [paused, setPaused] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const [debugLog, setDebugLog] = useState<string[]>([])
-  const [attachments, setAttachments] = useState<File[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const lofiRef = useRef<LofiBackgroundHandle>(null)
+  const [attachedFiles, setAttachedFiles] = useState<{ name: string; status: 'uploading' | 'ready' | 'error' }[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
 
   function dbg(msg: string) {
@@ -56,6 +53,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     setDebugLog((prev) => [...prev.slice(-49), `${ts} ${msg}`])
   }
   const musicRef = useRef<HTMLAudioElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const fadeRef = useRef<number | null>(null)
   const [sessionStart] = useState(() => new Date())
   const [elapsed, setElapsed] = useState(0)
@@ -66,6 +64,74 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     }, 1000)
     return () => clearInterval(interval)
   }, [sessionStart])
+
+  const sessionEndedRef = useRef(false)
+  const cachedTokenRef = useRef<string | null>(null)
+
+  // Cache auth token so beforeunload can use it synchronously
+  useEffect(() => {
+    let cancelled = false
+    async function refreshToken() {
+      const token = await getIdToken()
+      if (!cancelled) cachedTokenRef.current = token
+    }
+    refreshToken()
+    const interval = setInterval(refreshToken, 30_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [getIdToken])
+
+  // Heartbeat: update lastHeartbeat every 60s so cleanup Lambda knows we're alive
+  useEffect(() => {
+    if (!sessionId) return
+    const interval = setInterval(async () => {
+      try {
+        await api.updateSession(sessionId, { lastHeartbeat: new Date().toISOString() }, getIdToken)
+      } catch {}
+    }, 60_000)
+    return () => clearInterval(interval)
+  }, [sessionId, getIdToken])
+
+  // Auto-end session on tab close / navigation away
+  useEffect(() => {
+    if (!sessionId) return
+
+    function endSessionNow() {
+      if (sessionEndedRef.current || !cachedTokenRef.current) return
+      sessionEndedRef.current = true
+      const durationMinutes = Math.max(1, Math.round((Date.now() - sessionStart.getTime()) / 60000))
+      const payload = JSON.stringify({
+        endTime: new Date().toISOString(),
+        durationMinutes,
+        messageCount: transcript.length,
+        status: 'completed',
+      })
+      const url = `${import.meta.env.VITE_API_URL}/sessions/${sessionId}`
+      fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cachedTokenRef.current}`,
+        },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {})
+    }
+
+    function handleBeforeUnload() {
+      endSessionNow()
+    }
+
+    function handlePageHide(e: PageTransitionEvent) {
+      if (!e.persisted) endSessionNow()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handlePageHide)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+    }
+  }, [sessionId, transcript.length])
 
   const MUSIC_VOL_IDLE    = 0.35
   const MUSIC_VOL_TALKING = 0.08
@@ -104,16 +170,11 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
   function handleSend() {
     const text = input.trim()
     if (!text || !connected) return
-    send(text)
+    const readyFiles = attachedFiles.filter(f => f.status === 'ready')
+    send(text, readyFiles.length > 0 ? readyFiles.map(f => f.name) : undefined)
     setInput('')
+    setAttachedFiles(prev => prev.filter(f => f.status === 'uploading'))
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-  }
-
-  function toggleMute() {
-    const audio = musicRef.current
-    if (!audio) return
-    audio.muted = !audio.muted
-    setMuted(audio.muted)
   }
 
   function togglePause() {
@@ -128,18 +189,8 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     }
   }
 
-  async function togglePiP() {
-    const video = lofiRef.current?.getVideo()
-    if (!video) return
-    try {
-      if (document.pictureInPictureElement) {
-        await document.exitPictureInPicture()
-      } else {
-        await video.requestPictureInPicture()
-      }
-    } catch (e) {
-      console.error('PiP failed:', e)
-    }
+  function togglePiP() {
+    // PiP not available with GIF background
   }
 
   async function toggleRecording() {
@@ -198,6 +249,39 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     dbg('recorder started')
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = e.target.files
+    if (!selectedFiles || !sessionId) return
+    const newFiles = Array.from(selectedFiles)
+    const startIdx = attachedFiles.length
+
+    setAttachedFiles(prev => [
+      ...prev,
+      ...newFiles.map(f => ({ name: f.name, status: 'uploading' as const })),
+    ])
+
+    for (let i = 0; i < newFiles.length; i++) {
+      try {
+        const { uploadUrl } = await api.requestUpload(
+          sessionId,
+          { fileName: newFiles[i].name, contentType: newFiles[i].type || 'application/octet-stream' },
+          getIdToken,
+        )
+        await api.uploadFileToS3(uploadUrl, newFiles[i])
+        setAttachedFiles(prev => prev.map((f, j) =>
+          j === startIdx + i ? { ...f, status: 'ready' } : f
+        ))
+      } catch {
+        setAttachedFiles(prev => prev.map((f, j) =>
+          j === startIdx + i ? { ...f, status: 'error' } : f
+        ))
+      }
+    }
+
+    api.processDocuments(sessionId, getIdToken).catch(() => {})
+    e.target.value = ''
+  }
+
   const statusLabel = !connected
     ? 'Connecting…'
     : appState === 'thinking'
@@ -205,11 +289,6 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
     : appState === 'talking'
     ? 'Speaking…'
     : 'Listening…'
-
-  const startTime = sessionStart.toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
 
   return (
     <div className="h-screen flex flex-col bg-cream-100 font-instrument overflow-hidden">
@@ -271,14 +350,10 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
           <div className="flex-1 flex items-center justify-center min-h-0 min-w-0">
             <div className="relative w-full h-full" style={{ maxWidth: 'calc((100vh - 200px) * 4/3)' }}>
             <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-900">
-            <LofiBackground ref={lofiRef} />
+            <LofiBackground />
             <div
-              className="absolute z-10"
+              className="absolute z-10 inset-0"
               style={{
-                left:       `${activeX}%`,
-                top:        `${activeY}%`,
-                height:     `${activeScale}%`,
-                width:      'auto',
                 opacity:    DEV_OVERLAY ? 0.5 : (appState === 'idle' ? 0 : 1),
                 transition: DEV_OVERLAY ? undefined : 'opacity 300ms ease',
               }}
@@ -288,6 +363,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
                 attentionSrc={ATTENTION_IMAGE}
                 viseme={currentViseme}
                 talking={appState === 'talking'}
+                devOverlay={DEV_OVERLAY}
               />
             </div>
 
@@ -368,8 +444,8 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
                         <GraduationCap className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex flex-col gap-1 min-w-0">
-                        <div className="bg-white border border-cream-border rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-ink leading-relaxed">
-                          {msg.text}
+                        <div className="bg-white border border-cream-border rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-ink leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-pre:my-2 prose-pre:bg-gray-50 prose-pre:rounded-lg prose-code:text-indigo-dark prose-code:before:content-none prose-code:after:content-none">
+                          <ReactMarkdown>{msg.text}</ReactMarkdown>
                         </div>
                         <span className="text-[11px] text-ink-muted pl-1">
                           {formatTime(sessionStart, i)}
@@ -378,6 +454,16 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
                     </div>
                   ) : (
                     <div className="flex flex-col items-end gap-1">
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 justify-end max-w-[85%]">
+                          {msg.attachments.map((name, j) => (
+                            <span key={j} className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-bg border border-indigo-light/20 rounded-lg text-xs text-indigo-dark">
+                              <FileText className="w-3 h-3" />
+                              <span className="truncate max-w-[140px]">{name}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="bg-indigo-bg border border-indigo-light/20 rounded-2xl rounded-tr-sm px-4 py-3 text-sm text-ink leading-relaxed max-w-[85%]">
                         {msg.text}
                       </div>
@@ -392,11 +478,17 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
             {/* Typing indicator */}
             {appState === 'thinking' && (
-              <div className="flex items-center gap-1 px-2 py-1">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:0ms]" />
-                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:150ms]" />
-                  <div className="w-2 h-2 rounded-full bg-ink-muted animate-bounce [animation-delay:300ms]" />
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-indigo flex items-center justify-center shrink-0 mt-0.5">
+                  <GraduationCap className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2 bg-white border border-cream-border rounded-2xl rounded-tl-sm px-4 py-3">
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:0ms]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:150ms]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-ink-muted animate-bounce [animation-delay:300ms]" />
+                  </div>
+                  <ThinkingTimer />
                 </div>
               </div>
             )}
@@ -406,40 +498,42 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
 
           {/* Input */}
           <div className="pt-4 shrink-0">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.md,.csv,.png,.jpg,.jpeg"
-              onChange={(e) => {
-                if (e.target.files) setAttachments((prev) => [...prev, ...Array.from(e.target.files!)])
-                e.target.value = ''
-              }}
-            />
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {attachments.map((file, i) => (
-                  <div key={`${file.name}-${i}`} className="flex items-center gap-1.5 bg-cream-100 border border-cream-border rounded-lg px-2.5 py-1.5">
-                    <FileText className="w-3.5 h-3.5 text-ink-muted shrink-0" />
-                    <span className="text-xs text-ink-secondary max-w-[120px] truncate">{file.name}</span>
-                    <button
-                      onClick={() => setAttachments((prev) => prev.filter((_, idx) => idx !== i))}
-                      className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+            {attachedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 pb-2">
+                {attachedFiles.map((file, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-bg border border-indigo-light/20 rounded-lg text-xs font-medium text-indigo-dark">
+                    {file.status === 'uploading' ? (
+                      <Loader2 className="w-3.5 h-3.5 text-indigo animate-spin" />
+                    ) : file.status === 'ready' ? (
+                      <Check className="w-3.5 h-3.5 text-green-600" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5 text-red-400" />
+                    )}
+                    <span className="truncate max-w-[140px]">{file.name}</span>
+                    {file.status !== 'uploading' && (
+                      <button onClick={() => setAttachedFiles(prev => prev.filter((_, j) => j !== i))} className="text-ink-muted hover:text-ink-secondary ml-0.5 cursor-pointer">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </span>
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-3 bg-card border border-card-border rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-3 bg-white border border-cream-border rounded-2xl px-4 py-3">
               <button
+                className={`transition-colors cursor-pointer shrink-0 ${attachedFiles.some(f => f.status === 'uploading') ? 'text-indigo animate-pulse' : 'text-ink-muted hover:text-ink-secondary'}`}
                 onClick={() => fileInputRef.current?.click()}
-                className="text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer shrink-0"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
               <input
                 className="flex-1 text-sm text-ink placeholder-ink-muted outline-none bg-transparent min-w-0"
                 placeholder={connected ? 'Message StudyMate...' : 'Connecting…'}
@@ -507,6 +601,7 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
         <PostStudyModal
           onClose={() => setShowPostStudy(false)}
           onBackToDashboard={async () => {
+            sessionEndedRef.current = true
             if (sessionId) {
               const durationMinutes = Math.max(1, Math.round((Date.now() - sessionStart.getTime()) / 60000))
               try {
@@ -549,6 +644,16 @@ export default function StudySession({ sessionId, onExit, onHome }: { sessionId:
       )}
     </div>
   )
+}
+
+function ThinkingTimer() {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setSeconds(s => s + 1), 1000)
+    return () => clearInterval(interval)
+  }, [])
+  if (seconds < 2) return null
+  return <span className="text-xs text-ink-muted tabular-nums">{seconds}s</span>
 }
 
 function formatTime(_sessionStart: Date, _index: number): string {

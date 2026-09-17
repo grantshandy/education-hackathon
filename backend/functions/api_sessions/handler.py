@@ -151,6 +151,9 @@ def update_session(user_id, session_id, body):
         "status": "S",
         "summary": "S",
         "transcript": "L",
+        "courseId": "S",
+        "courseName": "S",
+        "lastHeartbeat": "S",
     }
 
     for field in allowed_fields:

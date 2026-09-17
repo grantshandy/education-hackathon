@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import {
   X,
   Trophy,
@@ -102,9 +103,9 @@ export default function PostStudyModal({
                 <Sparkles className="w-4 h-4 text-indigo" />
                 <span className="font-bold text-sm text-ink">AI Summary</span>
               </div>
-              <p className="text-sm text-indigo-dark leading-relaxed whitespace-pre-wrap">
-                {generatedSummary}
-              </p>
+              <div className="text-sm text-indigo-dark leading-relaxed prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:my-2 prose-headings:text-indigo-dark prose-pre:my-2 prose-pre:bg-white/60 prose-pre:rounded-lg prose-code:text-indigo-dark prose-code:before:content-none prose-code:after:content-none prose-strong:text-indigo-dark">
+                <ReactMarkdown>{generatedSummary}</ReactMarkdown>
+              </div>
             </>
           ) : (
             <>

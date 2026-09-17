@@ -41,8 +41,10 @@ export interface Session {
   durationMinutes: number
   messageCount: number
   status: 'active' | 'completed'
+  materialsStatus?: 'processing' | 'ready'
   summary: string | null
   transcript?: TranscriptMessage[]
+  lastHeartbeat?: string
 }
 
 type TokenGetter = () => Promise<string | null>
@@ -69,7 +71,7 @@ export const api = {
   getSession: (sessionId: string, getIdToken: TokenGetter): Promise<{ session: Session }> =>
     apiFetch(`/sessions/${sessionId}`, {}, getIdToken),
 
-  updateSession: (sessionId: string, data: Partial<Pick<Session, 'endTime' | 'durationMinutes' | 'messageCount' | 'status' | 'summary'>> & { transcript?: TranscriptMessage[] }, getIdToken: TokenGetter): Promise<{ session: Session }> =>
+  updateSession: (sessionId: string, data: Partial<Pick<Session, 'endTime' | 'durationMinutes' | 'messageCount' | 'status' | 'summary' | 'courseId' | 'courseName' | 'lastHeartbeat'>> & { transcript?: TranscriptMessage[] }, getIdToken: TokenGetter): Promise<{ session: Session }> =>
     apiFetch(`/sessions/${sessionId}`, { method: 'PATCH', body: JSON.stringify(data) }, getIdToken),
 
   deleteSession: (sessionId: string, getIdToken: TokenGetter): Promise<{ deleted: boolean }> =>
@@ -94,4 +96,39 @@ export const api = {
     }
     return res.json()
   },
+
+  requestUpload: (
+    sessionId: string,
+    data: { fileName: string; contentType: string },
+    getIdToken: TokenGetter,
+  ): Promise<{ documentId: string; uploadUrl: string; s3Key: string }> =>
+    apiFetch(`/sessions/${sessionId}/upload`, { method: 'POST', body: JSON.stringify(data) }, getIdToken),
+
+  uploadFileToS3: (uploadUrl: string, file: File, onProgress?: (pct: number) => void): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', uploadUrl)
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+      if (onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+        }
+      }
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`))
+      xhr.onerror = () => reject(new Error('Upload network error'))
+      xhr.send(file)
+    })
+  },
+
+  processDocuments: (
+    sessionId: string,
+    getIdToken: TokenGetter,
+  ): Promise<{ status: string; ingestionJobId: string | null; documentCount: number }> =>
+    apiFetch(`/sessions/${sessionId}/process`, { method: 'POST' }, getIdToken),
+
+  listDocuments: (
+    sessionId: string,
+    getIdToken: TokenGetter,
+  ): Promise<{ documents: Array<{ documentId: string; fileName: string; status: string }> }> =>
+    apiFetch(`/sessions/${sessionId}/documents`, {}, getIdToken),
 }

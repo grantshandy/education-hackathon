@@ -4,16 +4,28 @@ import os
 import time
 import uuid
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 import boto3
 
 bedrock = boto3.client("bedrock-runtime")
+bedrock_agent_runtime = boto3.client("bedrock-agent-runtime")
 polly = boto3.client("polly")
 s3 = boto3.client("s3")
 transcribe = boto3.client("transcribe")
+dynamodb = boto3.resource("dynamodb")
+connections_table = dynamodb.Table(os.environ["CONNECTIONS_TABLE"])
+sessions_table = dynamodb.Table(os.environ["SESSIONS_TABLE"])
+
+_executor = ThreadPoolExecutor(max_workers=2)
 
 MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 VOICE_ID = os.environ.get("POLLY_VOICE_ID", "Joanna")
 AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
+KNOWLEDGE_BASE_ID = os.environ.get("KNOWLEDGE_BASE_ID", "")
+DOCUMENTS_BUCKET = os.environ.get("DOCUMENTS_BUCKET", "")
+
+IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"}
+MAX_DOC_BYTES = 15_000_000
 
 SYSTEM_PROMPT = """You are the girl from the lofi hip hop radio stream — the one always at her desk, lamp on, rain on the window, headphones around her neck. You have your own work spread in front of you, and it just so happens to be the same subject the student is studying. You never make a big deal of this. You might mention it offhandedly, like you just noticed the coincidence.
 
@@ -34,12 +46,121 @@ def _apigw_client(event):
     return boto3.client("apigatewaymanagementapi", endpoint_url=endpoint)
 
 
-def _ask_bedrock(text: str) -> str:
+def _download_document_blocks(documents):
+    """Download documents from S3 and return as Claude content blocks."""
+    blocks = []
+    for doc in documents:
+        s3_key = doc.get("s3Key", "")
+        content_type = doc.get("contentType", "")
+        file_name = doc.get("fileName", "unknown")
+        if not s3_key:
+            continue
+        try:
+            obj = s3.get_object(Bucket=DOCUMENTS_BUCKET, Key=s3_key)
+            data = obj["Body"].read()
+            if len(data) > MAX_DOC_BYTES:
+                print(f"Skipping {file_name}: {len(data)} bytes exceeds limit")
+                continue
+            b64 = base64.b64encode(data).decode()
+
+            if content_type in {"application/pdf"}:
+                blocks.append({
+                    "type": "document",
+                    "source": {"type": "base64", "media_type": "application/pdf", "data": b64},
+                })
+            elif content_type in IMAGE_TYPES:
+                media = content_type if content_type != "image/jpg" else "image/jpeg"
+                blocks.append({
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": media, "data": b64},
+                })
+            print(f"RAG: loaded {file_name} ({len(data)} bytes) as content block")
+        except Exception as e:
+            print(f"Failed to download {s3_key}: {e}")
+    return blocks
+
+
+def _get_rag_context(connection_id: str, query: str):
+    """Returns (text_context, doc_blocks) — text from cache, raw docs from S3."""
+    conn = connections_table.get_item(Key={"connectionId": connection_id}).get("Item", {})
+    session_id = conn.get("sessionId", "")
+    user_sub = conn.get("userSub", "")
+    if not session_id:
+        return "", []
+
+    # Check DynamoDB for cached extracted text first — cheapest path
+    try:
+        session = sessions_table.get_item(Key={"userId": user_sub, "sessionId": session_id}).get("Item", {})
+        text = session.get("extractedText", "")
+        documents = session.get("documents", [])
+        extracted_at = session.get("extractedAt", "")
+
+        if text:
+            doc_blocks = []
+            if documents and DOCUMENTS_BUCKET and extracted_at:
+                new_docs = [d for d in documents if d.get("uploadedAt", "") > extracted_at]
+                if new_docs:
+                    print(f"RAG: {len(new_docs)} new docs since last extraction")
+                    doc_blocks = _download_document_blocks(new_docs)
+            print(f"RAG: cached text {len(text)} chars")
+            return text, doc_blocks
+
+        # No cached text — try KB retrieval
+        if KNOWLEDGE_BASE_ID and KNOWLEDGE_BASE_ID != "none":
+            try:
+                result = bedrock_agent_runtime.retrieve(
+                    knowledgeBaseId=KNOWLEDGE_BASE_ID,
+                    retrievalQuery={"text": query},
+                    retrievalConfiguration={
+                        "vectorSearchConfiguration": {
+                            "numberOfResults": 5,
+                            "filter": {
+                                "equals": {"key": "sessionId", "value": session_id}
+                            },
+                        }
+                    },
+                )
+                chunks = [r["content"]["text"] for r in result.get("retrievalResults", []) if r.get("content", {}).get("text")]
+                if chunks:
+                    print(f"RAG: KB returned {len(chunks)} chunks")
+                    return "\n\n".join(chunks), []
+            except Exception as e:
+                print(f"RAG KB error: {e}")
+
+        # Last resort — download raw documents
+        doc_blocks = []
+        if documents and DOCUMENTS_BUCKET:
+            print(f"RAG: no cached text, downloading {len(documents)} raw documents")
+            doc_blocks = _download_document_blocks(documents)
+        return "", doc_blocks
+    except Exception as e:
+        print(f"RAG error: {e}")
+
+    return "", []
+
+
+def _ask_bedrock(text: str, context: str = "", doc_blocks: list = None) -> str:
+    system = SYSTEM_PROMPT
+    if context:
+        system += (
+            "\n\n--- COURSE MATERIALS (from student's uploaded files) ---\n"
+            + context
+            + "\n--- END COURSE MATERIALS ---\n\n"
+            "Reference these materials when answering. Quote specific terms and concepts from them."
+        )
+
+    if doc_blocks:
+        user_content = list(doc_blocks)
+        prefix = "[The student's uploaded course materials are attached above. Reference them directly when answering.]\n\n" if not context else ""
+        user_content.append({"type": "text", "text": prefix + text})
+    else:
+        user_content = text
+
     body = json.dumps({
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 512,
-        "system": SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": text}],
+        "system": system,
+        "messages": [{"role": "user", "content": user_content}],
     })
     resp = bedrock.invoke_model(modelId=MODEL_ID, body=body)
     result = json.loads(resp["body"].read())
@@ -48,38 +169,27 @@ def _ask_bedrock(text: str) -> str:
 
 def _synthesize(text: str) -> dict:
     """Returns {"audio_url": str, "visemes": list[{"time": int, "value": str}]}"""
-    audio_resp = polly.synthesize_speech(
-        Text=text,
-        OutputFormat="mp3",
-        VoiceId=VOICE_ID,
-        Engine="neural",
-    )
-    audio_bytes = audio_resp["AudioStream"].read()
 
-    key = f"audio/{uuid.uuid4()}.mp3"
-    s3.put_object(
-        Bucket=AUDIO_BUCKET,
-        Key=key,
-        Body=audio_bytes,
-        ContentType="audio/mpeg",
-    )
-    audio_url = s3.generate_presigned_url(
-        "get_object",
-        Params={"Bucket": AUDIO_BUCKET, "Key": key},
-        ExpiresIn=300,
-    )
+    def _get_audio():
+        audio_resp = polly.synthesize_speech(
+            Text=text, OutputFormat="mp3", VoiceId=VOICE_ID, Engine="neural",
+        )
+        audio_bytes = audio_resp["AudioStream"].read()
+        key = f"audio/{uuid.uuid4()}.mp3"
+        s3.put_object(Bucket=AUDIO_BUCKET, Key=key, Body=audio_bytes, ContentType="audio/mpeg")
+        return s3.generate_presigned_url("get_object", Params={"Bucket": AUDIO_BUCKET, "Key": key}, ExpiresIn=300)
 
-    marks_resp = polly.synthesize_speech(
-        Text=text,
-        OutputFormat="json",
-        VoiceId=VOICE_ID,
-        Engine="neural",
-        SpeechMarkTypes=["viseme"],
-    )
-    raw = marks_resp["AudioStream"].read().decode()
-    visemes = [json.loads(line) for line in raw.strip().splitlines() if line]
+    def _get_visemes():
+        marks_resp = polly.synthesize_speech(
+            Text=text, OutputFormat="json", VoiceId=VOICE_ID, Engine="neural",
+            SpeechMarkTypes=["viseme"],
+        )
+        raw = marks_resp["AudioStream"].read().decode()
+        return [json.loads(line) for line in raw.strip().splitlines() if line]
 
-    return {"audio_url": audio_url, "visemes": visemes}
+    audio_future = _executor.submit(_get_audio)
+    viseme_future = _executor.submit(_get_visemes)
+    return {"audio_url": audio_future.result(), "visemes": viseme_future.result()}
 
 
 def _transcribe_audio(audio_b64: str, content_type: str) -> str:
@@ -191,19 +301,24 @@ def lambda_handler(event, context):
 
         _send(apigw, connection_id, json.dumps({"type": "thinking"}))
 
-    print("[handler] calling bedrock")
-    response_text = _ask_bedrock(text)
-    print(f"[handler] bedrock response: {response_text[:80]!r}")
+    try:
+        rag_context, doc_blocks = _get_rag_context(connection_id, text)
+        response_text = _ask_bedrock(text, rag_context, doc_blocks)
+        speech = _synthesize(response_text)
 
-    print("[handler] synthesizing speech")
-    speech = _synthesize(response_text)
-    print("[handler] synthesis done, sending response")
-
-    _send(apigw, connection_id, json.dumps({
-        "type": "response",
-        "text": response_text,
-        "audio_url": speech["audio_url"],
-        "visemes": speech["visemes"],
-    }))
+        _send(apigw, connection_id, json.dumps({
+            "type": "response",
+            "text": response_text,
+            "audio_url": speech["audio_url"],
+            "visemes": speech["visemes"],
+        }))
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        _send(apigw, connection_id, json.dumps({
+            "type": "response",
+            "text": "Sorry, I ran into an issue processing that. Try again?",
+            "audio_url": "",
+            "visemes": [],
+        }))
 
     return {"statusCode": 200}

@@ -7,6 +7,11 @@ import {
   Flame,
   BookOpen,
   ChevronRight,
+  Trash2,
+  FolderInput,
+  X,
+  Loader2,
+  Check,
 } from 'lucide-react'
 import StartSessionModal from './StartSessionModal'
 import AddCourseModal from './AddCourseModal'
@@ -61,13 +66,56 @@ export default function DashboardPage({
     }
   }
 
-  async function handleStartSession(title: string, courseId: string, courseName: string) {
+  function handleSessionReady(sessionId: string) {
+    setShowStartModal(false)
+    onStartSession(sessionId)
+  }
+
+  const [assigningSessionId, setAssigningSessionId] = useState<string | null>(null)
+  const [savingAssign, setSavingAssign] = useState(false)
+  const [assignedSessionId, setAssignedSessionId] = useState<string | null>(null)
+  const [viewingSession, setViewingSession] = useState<Session | null>(null)
+
+  const unorganizedSessions = sessions
+    .filter((s) => !s.courseId && s.status === 'completed')
+    .sort((a, b) => b.startTime.localeCompare(a.startTime))
+
+  async function handleAssignCourse(sessionId: string, courseId: string) {
+    const course = courses.find((c) => c.courseId === courseId)
+    if (!course) return
+    setSavingAssign(true)
     try {
-      const { session } = await api.createSession({ title, courseId, courseName }, getIdToken)
-      setShowStartModal(false)
-      onStartSession(session.sessionId)
+      await api.updateSession(sessionId, { courseId, courseName: course.name }, getIdToken)
+      setSessions((prev) =>
+        prev.map((s) => (s.sessionId === sessionId ? { ...s, courseId, courseName: course.name } : s)),
+      )
+      setAssigningSessionId(null)
+      setAssignedSessionId(sessionId)
+      setTimeout(() => setAssignedSessionId(null), 1500)
     } catch (e) {
-      console.error('Failed to create session:', e)
+      console.error('Failed to assign session:', e)
+      alert('Failed to assign session. Please try again.')
+    } finally {
+      setSavingAssign(false)
+    }
+  }
+
+  async function handleDeleteSession(sessionId: string) {
+    try {
+      await api.deleteSession(sessionId, getIdToken)
+      setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId))
+    } catch (e) {
+      console.error('Failed to delete session:', e)
+    }
+  }
+
+  async function handleViewSummary(session: Session) {
+    try {
+      const { session: full } = await api.getSession(session.sessionId, getIdToken)
+      setViewingSession(full)
+    } catch (e) {
+      console.error('Failed to load session:', e)
+      setViewingSession(session)
     }
   }
 
@@ -256,13 +304,119 @@ export default function DashboardPage({
           )
         })()}
 
+        {/* Unorganized Sessions */}
+        {!loadingData && unorganizedSessions.length > 0 && (
+          <section className="flex flex-col gap-4 bg-white border border-cream-border-dark rounded-2xl p-6">
+            <h2 className="font-bold text-[22px] text-indigo-dark">
+              Unorganized Sessions
+            </h2>
+            <p className="text-sm text-[#5C5A80] -mt-2">
+              Sessions not assigned to any course
+            </p>
+            <div className="flex flex-col divide-y divide-cream-border-dark">
+              {unorganizedSessions.map((session) => {
+                const date = new Date(session.startTime)
+                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase()
+                const day = date.getDate()
+                const isAssigning = assigningSessionId === session.sessionId
+                return (
+                  <div key={session.sessionId} className="flex items-center gap-5 py-4">
+                    <div className="w-14 h-14 rounded-xl bg-indigo-bg flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[10px] font-semibold text-indigo uppercase leading-none">{month}</span>
+                      <span className="text-lg font-bold text-indigo-dark leading-tight">{day}</span>
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-semibold text-[15px] text-indigo-dark block">{session.title}</span>
+                      <span className="text-sm text-[#5C5A80]">
+                        {session.messageCount} message{session.messageCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#9A98B0]" />
+                        <span className="text-sm text-[#5C5A80]">{session.durationMinutes} min</span>
+                      </div>
+
+                      {/* Assign to course */}
+                      <div className="relative">
+                        {isAssigning ? (
+                          <div className="flex items-center gap-1">
+                            {savingAssign ? (
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 border border-indigo/30 rounded-lg text-sm font-medium text-indigo">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Assigning...
+                              </div>
+                            ) : (
+                              <>
+                                <select
+                                  autoFocus
+                                  className="text-sm border border-cream-border-dark rounded-lg px-2 py-1.5 text-indigo-dark bg-white outline-none focus:border-indigo/50 cursor-pointer"
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    if (e.target.value) handleAssignCourse(session.sessionId, e.target.value)
+                                  }}
+                                >
+                                  <option value="" disabled>Select course...</option>
+                                  {courses.map((c) => (
+                                    <option key={c.courseId} value={c.courseId}>{c.name}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => setAssigningSessionId(null)}
+                                  className="p-1 rounded-lg text-[#9A98B0] hover:text-[#5C5A80] transition-colors cursor-pointer"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        ) : assignedSessionId === session.sessionId ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-600">
+                            <Check className="w-3.5 h-3.5" />
+                            Assigned
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setAssigningSessionId(session.sessionId)}
+                            className="flex items-center gap-1 px-3 py-1.5 border border-cream-border-dark rounded-lg text-sm font-medium text-[#5C5A80] hover:text-indigo-dark hover:border-indigo/30 transition-colors cursor-pointer"
+                            title="Assign to course"
+                          >
+                            <FolderInput className="w-3.5 h-3.5" />
+                            Assign
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleViewSummary(session)}
+                        className="flex items-center gap-1 px-3 py-1.5 border border-cream-border-dark rounded-lg text-sm font-medium text-[#5C5A80] hover:text-indigo-dark hover:border-indigo/30 transition-colors cursor-pointer"
+                      >
+                        View Summary
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSession(session.sessionId)}
+                        className="p-1.5 rounded-lg text-[#9A98B0] hover:text-[#E11D48] hover:bg-[#FFF1F2] transition-colors cursor-pointer"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
       </main>
 
       {showStartModal && (
         <StartSessionModal
           courses={courses}
           onClose={() => setShowStartModal(false)}
-          onStart={handleStartSession}
+          onReady={handleSessionReady}
+          getIdToken={getIdToken}
         />
       )}
 
@@ -270,6 +424,13 @@ export default function DashboardPage({
         <AddCourseModal
           onClose={() => setShowAddCourseModal(false)}
           onCreate={handleCreateCourse}
+        />
+      )}
+
+      {viewingSession && (
+        <SessionSummaryModal
+          session={viewingSession}
+          onClose={() => setViewingSession(null)}
         />
       )}
     </div>
@@ -290,4 +451,63 @@ function getTimeAgo(date: Date): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
   if (diff < 172800) return 'Yesterday'
   return `${Math.floor(diff / 86400)}d ago`
+}
+
+function SessionSummaryModal({ session, onClose }: { session: Session; onClose: () => void }) {
+  const transcript = session.transcript || []
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center font-instrument" onClick={onClose}>
+      <div className="absolute inset-0 bg-[rgba(10,9,21,0.55)]" />
+      <div
+        className="relative w-[640px] max-h-[85vh] bg-white border border-cream-border-dark rounded-3xl shadow-[0_16px_32px_rgba(10,9,21,0.1)] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-8 pt-8 pb-4">
+          <div>
+            <h2 className="font-bold text-2xl text-indigo-dark">{session.title}</h2>
+            <p className="text-sm text-[#5C5A80] mt-1">
+              {new Date(session.startTime).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {' '}&middot; {session.durationMinutes} min &middot; {session.messageCount} messages
+            </p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-cream-border-dark/50 flex items-center justify-center hover:bg-cream-border-dark transition-colors cursor-pointer">
+            <X className="w-3.5 h-3.5 text-[#5C5A80]" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-8 pb-8 flex flex-col gap-6">
+          {session.summary && (
+            <div className="bg-indigo-bg/60 rounded-2xl p-5 flex flex-col gap-2">
+              <span className="font-bold text-sm text-indigo">AI Summary</span>
+              <p className="text-sm text-indigo-dark leading-relaxed whitespace-pre-wrap">{session.summary}</p>
+            </div>
+          )}
+
+          {transcript.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="font-bold text-sm text-[#5C5A80]">Chat History</span>
+              <div className="flex flex-col gap-3">
+                {transcript.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-indigo-bg border border-indigo-light/20 rounded-tr-sm'
+                        : 'bg-white border border-cream-border rounded-tl-sm'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : !session.summary ? (
+            <div className="py-12 text-center text-[#5C5A80] text-sm">
+              No summary or chat history available for this session.
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
 }

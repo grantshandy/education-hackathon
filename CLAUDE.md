@@ -67,6 +67,16 @@ Open the site, give it what you're studying, and study alongside an AI classmate
 The lo-fi environment makes studying feel comfortable and familiar, while voice interaction makes asking questions significantly faster and more natural than repeatedly switching to a chatbot and typing prompts.
 The result should feel less like using an AI tool and more like having someone there studying with you.
 
+Animation System (Target Implementation)
+The lo-fi girl character animation should work as follows:
+1. Idle state: A looping animation cycle (5-10 seconds) of the girl studying at her desk with subtle motion.
+2. When a prompt is received: Wait until she reaches the resting position in the animation cycle, then pause the loop.
+3. Transition to talking: Overlay the animation of her turning to look at the camera over the whole video.
+4. Talking state: Once she has looked at the camera, composite the generated mouth movement frames (viseme sprites) just over the bottom of her face.
+5. Transition back to idle: Play the turn-to-camera transition video in reverse, then resume the idle animation cycle.
+
+Current implementation uses static PNG sprites with opacity toggling (no video yet). Viseme sprites are full-frame images mapped to Amazon Polly viseme values (sil, p, t, f, k, i, r, u, @, a, e, o). The manifest.json in public/sprites/ maps Polly viseme keys to sprite file paths.
+
 -----------------
 
 Here are the services we have access to:

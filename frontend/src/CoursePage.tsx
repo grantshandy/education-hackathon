@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
   GraduationCap,
   ArrowLeft,
@@ -9,7 +9,6 @@ import {
   BarChart3,
   Flame,
   ChevronDown,
-  Plus,
   ChevronRight,
   Trash2,
   X,
@@ -18,6 +17,14 @@ import {
 import { useAuth } from './AuthContext'
 import { api, type Course, type Session } from './api'
 import { getColorSet, DEFAULT_ICON, ICON_MAP } from './courseStyles'
+import StartSessionModal from './StartSessionModal'
+
+interface SessionDocument {
+  fileName: string
+  contentType: string
+  uploadedAt: string
+  sessionTitle: string
+}
 
 type SortMode = 'recent' | 'longest' | 'shortest'
 
@@ -41,8 +48,8 @@ export default function CoursePage({
   const [editingName, setEditingName] = useState(false)
   const [editName, setEditName] = useState('')
   const [viewingSession, setViewingSession] = useState<Session | null>(null)
-  const [materials, setMaterials] = useState<File[]>([])
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [documents, setDocuments] = useState<SessionDocument[]>([])
+  const [showStartModal, setShowStartModal] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -57,6 +64,22 @@ export default function CoursePage({
       const found = coursesRes.courses.find((c) => c.courseId === courseId)
       if (found) setCourse(found)
       setSessions(sessionsRes.sessions)
+
+      const allDocs: SessionDocument[] = []
+      for (const s of sessionsRes.sessions) {
+        const docs = (s as any).documents as Array<{ fileName: string; contentType: string; uploadedAt: string }> | undefined
+        if (docs) {
+          for (const d of docs) {
+            allDocs.push({
+              fileName: d.fileName,
+              contentType: d.contentType,
+              uploadedAt: d.uploadedAt,
+              sessionTitle: s.title,
+            })
+          }
+        }
+      }
+      setDocuments(allDocs)
     } catch (e) {
       console.error('Failed to load course data:', e)
     } finally {
@@ -64,16 +87,9 @@ export default function CoursePage({
     }
   }
 
-  async function handleStartSession() {
-    try {
-      const { session } = await api.createSession(
-        { courseId, courseName: course?.name || '', title: 'Study Session' },
-        getIdToken,
-      )
-      onStartSession(session.sessionId)
-    } catch (e) {
-      console.error('Failed to create session:', e)
-    }
+  function handleSessionReady(sessionId: string) {
+    setShowStartModal(false)
+    onStartSession(sessionId)
   }
 
   async function handleSaveName() {
@@ -211,7 +227,7 @@ export default function CoursePage({
               Edit Course
             </button>
             <button
-              onClick={handleStartSession}
+              onClick={() => setShowStartModal(true)}
               className="flex items-center gap-2 px-5 py-2.5 bg-indigo-dark hover:bg-indigo text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
@@ -313,54 +329,41 @@ export default function CoursePage({
         </section>
 
         {/* Course Materials */}
-        <section className="flex flex-col gap-4 bg-card border border-card-border rounded-2xl p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-xl text-indigo-dark">Course Materials</h2>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-cream-100 border border-cream-border-dark rounded-lg text-sm font-medium text-[#6B5B50] hover:text-indigo-dark hover:bg-cream-200 transition-colors cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Material
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) setMaterials((prev) => [...prev, ...Array.from(e.target.files!)])
-                e.target.value = ''
-              }}
-            />
-          </div>
-          {materials.length === 0 ? (
-            <div className="py-8 text-center text-[#6B5B50] text-sm">
-              No materials yet. Click "Add Material" to upload files.
+        <section className="flex flex-col gap-4 bg-white border border-cream-border-dark rounded-2xl p-6">
+          <h2 className="font-bold text-xl text-indigo-dark">Course Materials</h2>
+          {documents.length === 0 ? (
+            <div className="py-8 text-center text-[#5C5A80] text-sm">
+              No materials yet. Upload files when starting a study session.
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-cream-border-dark">
-              {materials.map((file, i) => (
-                <div key={`${file.name}-${i}`} className="flex items-center gap-4 py-3.5">
+              {documents.map((doc, i) => (
+                <div key={`${doc.fileName}-${i}`} className="flex items-center gap-4 py-3.5">
                   <div className={`w-9 h-9 rounded-lg ${c.iconBg} border ${c.border} flex items-center justify-center shrink-0`}>
                     <FileText className={`w-4 h-4 ${c.text}`} />
                   </div>
-                  <span className="flex-1 text-sm font-medium text-indigo-dark">{file.name}</span>
-                  <span className="text-sm text-[#9C8B7E]">
-                    {(file.size / 1024 / 1024).toFixed(1)} MB
-                  </span>
-                  <button
-                    onClick={() => setMaterials((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="p-1 text-[#9C8B7E] hover:text-[#C24B32] transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-indigo-dark block truncate">{doc.fileName}</span>
+                    <span className="text-xs text-[#9A98B0]">
+                      {doc.sessionTitle} &middot; {new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </section>
       </main>
+
+      {showStartModal && course && (
+        <StartSessionModal
+          courses={[]}
+          fixedCourse={{ courseId: course.courseId, name: course.name }}
+          onClose={() => setShowStartModal(false)}
+          onReady={handleSessionReady}
+          getIdToken={getIdToken}
+        />
+      )}
 
       {/* Summary Modal */}
       {viewingSession && (

@@ -10,9 +10,9 @@ export interface Viseme {
 
 export interface StudyBuddyState {
   appState: AppState
-  transcript: { role: 'user' | 'buddy'; text: string }[]
+  transcript: { role: 'user' | 'buddy'; text: string; attachments?: string[] }[]
   currentViseme: string
-  send: (text: string) => void
+  send: (text: string, attachments?: string[]) => void
   connected: boolean
 }
 
@@ -20,7 +20,8 @@ const WS_URL = import.meta.env.VITE_WS_URL as string
 const RECONNECT_DELAY_MS = 2000
 
 export function useStudyBuddy(
-  getToken?: () => Promise<string | null>
+  getToken?: () => Promise<string | null>,
+  sessionId?: string | null,
 ): StudyBuddyState {
   const ws = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<number | null>(null)
@@ -41,6 +42,9 @@ export function useStudyBuddy(
       const token = await getToken()
       if (token) {
         url = `${WS_URL}?token=${encodeURIComponent(token)}`
+        if (sessionId) {
+          url += `&sessionId=${encodeURIComponent(sessionId)}`
+        }
       }
     }
 
@@ -77,7 +81,7 @@ export function useStudyBuddy(
         playResponse(msg.audio_url, msg.visemes)
       }
     }
-  }, [getToken])
+  }, [getToken, sessionId])
 
   useEffect(() => {
     destroyed.current = false
@@ -141,10 +145,10 @@ export function useStudyBuddy(
     visemeTimers.current.push(playId)
   }
 
-  const send = useCallback((text: string) => {
+  const send = useCallback((text: string, attachments?: string[]) => {
     stopAudio()
     setAppState('thinking')
-    setTranscript((prev) => [...prev, { role: 'user', text }])
+    setTranscript((prev) => [...prev, { role: 'user', text, attachments }])
     const payload = JSON.stringify({ action: 'message', text })
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(payload)

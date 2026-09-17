@@ -53,6 +53,7 @@ def lambda_handler(event, context):
 
     qs = event.get("queryStringParameters") or {}
     token = qs.get("token")
+    session_id = qs.get("sessionId", "")
 
     user_email = "anonymous"
     user_sub = "anonymous"
@@ -69,6 +70,7 @@ def lambda_handler(event, context):
         "connectionId": connection_id,
         "userEmail": user_email,
         "userSub": user_sub,
+        "sessionId": session_id,
         "ttl": int(time.time()) + TTL_SECONDS,
     })
 

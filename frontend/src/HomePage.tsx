@@ -6,7 +6,7 @@ import {
   MessageCircle,
   FileText,
 } from 'lucide-react'
-import { VIDEO_URL } from './LofiBackground'
+const VIDEO_URL = '/sprites/lofi-girl-loop.gif'
 
 const STEPS = [
   {
@@ -64,12 +64,9 @@ export default function HomePage({
 
       {/* Hero Section — video background */}
       <section className="relative h-[520px] overflow-hidden">
-        <video
+        <img
           src={VIDEO_URL}
-          autoPlay
-          muted
-          loop
-          playsInline
+          alt=""
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[rgba(30,20,12,0.85)] via-[rgba(30,20,12,0.6)] to-[rgba(30,20,12,0.3)]" />
